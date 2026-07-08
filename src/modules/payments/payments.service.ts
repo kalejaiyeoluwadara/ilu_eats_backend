@@ -106,7 +106,7 @@ export class PaymentsService {
       },
     );
 
-    order.paymentReference = reference;
+    order.paymentReference = response.data.reference;
     await order.save();
 
     return {
@@ -120,7 +120,6 @@ export class PaymentsService {
   async verifyPayment(userId: string, reference: string) {
     const order = await this.orderModel.findOne({
       paymentReference: reference,
-      userId,
     });
     if (!order) throw new NotFoundException('Payment reference not found');
 
