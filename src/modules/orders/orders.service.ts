@@ -61,6 +61,7 @@ export class OrdersService {
     return {
       id: order.orderCode,
       status: order.status,
+      paymentStatus: order.paymentStatus,
       subtotal: order.subtotal,
       deliveryFee: order.deliveryFee,
       serviceFee: order.serviceFee,
@@ -82,6 +83,8 @@ export class OrdersService {
       customerPhone: order.customerPhone,
       deliveryAddress: order.deliveryAddress,
       paymentLabel: order.paymentLabel,
+      paymentStatus: order.paymentStatus,
+      paymentReference: order.paymentReference,
       lineItems: order.lineItems.map((item) => ({
         name: item.name,
         qty: item.qty,
@@ -166,6 +169,10 @@ export class OrdersService {
       notes: dto.notes ?? null,
       paymentMethod: dto.paymentMethod,
       paymentLabel: PAYMENT_LABELS[dto.paymentMethod],
+      paymentStatus:
+        dto.paymentMethod === PaymentMethod.Cash
+          ? PaymentStatus.NotApplicable
+          : PaymentStatus.Pending,
       lineItems,
       subtotal,
       deliveryFee,
@@ -180,6 +187,8 @@ export class OrdersService {
     return {
       orderId: order.orderCode,
       status: order.status,
+      paymentStatus: order.paymentStatus,
+      paymentRequired: order.paymentStatus === PaymentStatus.Pending,
       subtotal: order.subtotal,
       deliveryFee: order.deliveryFee,
       serviceFee: order.serviceFee,
