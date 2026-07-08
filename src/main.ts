@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { TransformMongoInterceptor } from './common/interceptors/transform-mongo.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -20,6 +21,7 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+  app.useGlobalInterceptors(new TransformMongoInterceptor());
 
   await app.listen(config.get<number>('port') ?? 3000);
 }

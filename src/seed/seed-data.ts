@@ -1,0 +1,815 @@
+/** Seed data ported from the frontend's mockCatalog.seed.ts */
+
+export const STORES_SEED = [
+  {
+    id: 's_mama_tope',
+    slug: 'mama-tope',
+    name: "Mama Tope's Kitchen",
+    tagline: 'Hot jollof, smoky goat meat, every weekday.',
+    description:
+      'A neighborhood favorite serving authentic Yoruba dishes the way mama makes them. Fresh, smoky, generous portions.',
+    image:
+      'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=800&q=80',
+    cover:
+      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1600&q=80',
+    categories: ['local', 'snacks'],
+    rating: 4.8,
+    reviews: 1240,
+    deliveryTimeMins: [20, 30],
+    deliveryFee: 700,
+    minOrder: 1500,
+    isOpen: true,
+    isFeatured: true,
+    location: 'Ilisan-Remo',
+    tags: ['Free delivery over ₦5k', 'Top Rated'],
+  },
+  {
+    id: 's_babrite',
+    slug: 'babrite',
+    name: 'Babrite Pizzeria',
+    tagline: 'Wood-fired pizza, dripping cheese, made to order.',
+    description:
+      'Hand-stretched dough, San Marzano tomato base, and oozing mozzarella — fired hot and delivered fast.',
+    image:
+      'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=800&q=80',
+    cover:
+      'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1600&q=80',
+    categories: ['pizza', 'drinks'],
+    rating: 4.7,
+    reviews: 980,
+    deliveryTimeMins: [25, 40],
+    deliveryFee: 800,
+    minOrder: 3000,
+    isOpen: true,
+    isFeatured: true,
+    location: 'Ilisan-Remo',
+    tags: ['Pizza', 'Fast Delivery'],
+  },
+  {
+    id: 's_sweet_layers',
+    slug: 'sweet-layers',
+    name: 'Sweet Layers Bakery',
+    tagline: 'Cakes that look as good as they taste.',
+    description:
+      "Custom cakes, cupcakes, and pastries baked daily. Birthdays, surprises, or just because — we've got you.",
+    image:
+      'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
+    cover:
+      'https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=1600&q=80',
+    categories: ['cakes', 'snacks'],
+    rating: 4.9,
+    reviews: 612,
+    deliveryTimeMins: [40, 60],
+    deliveryFee: 1000,
+    minOrder: 2500,
+    isOpen: true,
+    isFeatured: true,
+    location: 'Ilisan-Remo',
+    tags: ['New', 'Premium'],
+    isNew: true,
+  },
+  {
+    id: 's_burger_lab',
+    slug: 'burger-lab',
+    name: 'Burger Lab',
+    tagline: 'Smashed patties, melty cheese, crisp buns.',
+    description:
+      'We obsess over the perfect burger — fresh-ground beef, brioche buns, secret sauce. No shortcuts.',
+    image:
+      'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80',
+    cover:
+      'https://images.unsplash.com/photo-1571091718767-18b5b1457add?auto=format&fit=crop&w=1600&q=80',
+    categories: ['burgers', 'snacks', 'drinks'],
+    rating: 4.6,
+    reviews: 540,
+    deliveryTimeMins: [25, 35],
+    deliveryFee: 900,
+    minOrder: 2500,
+    isOpen: true,
+    location: 'Ilisan-Remo',
+    tags: ['Burgers', 'Fries'],
+  },
+  {
+    id: 's_shawarma_king',
+    slug: 'shawarma-king',
+    name: 'Shawarma King',
+    tagline: 'Loaded wraps, hot off the grill.',
+    description:
+      'Stacked beef and chicken shawarma with house garlic sauce. Bigger, hotter, better.',
+    image:
+      'https://images.unsplash.com/photo-1633321702518-7feccafb94d5?auto=format&fit=crop&w=800&q=80',
+    cover:
+      'https://images.unsplash.com/photo-1561651823-34feb02250e4?auto=format&fit=crop&w=1600&q=80',
+    categories: ['shawarma', 'drinks'],
+    rating: 4.5,
+    reviews: 820,
+    deliveryTimeMins: [20, 35],
+    deliveryFee: 700,
+    minOrder: 2000,
+    isOpen: true,
+    location: 'Ilisan-Remo',
+    tags: ['Late Night', 'Shawarma'],
+  },
+  {
+    id: 's_juice_bar',
+    slug: 'fresh-press',
+    name: 'Fresh Press Juice Bar',
+    tagline: 'Cold-pressed, pulped today, never sat overnight.',
+    description:
+      'Smoothies and cold-pressed juices made to order. Real fruit, real ice, real refreshing.',
+    image:
+      'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=800&q=80',
+    cover:
+      'https://images.unsplash.com/photo-1546039907-7fa05f864c02?auto=format&fit=crop&w=1600&q=80',
+    categories: ['smoothies', 'drinks'],
+    rating: 4.7,
+    reviews: 305,
+    deliveryTimeMins: [15, 25],
+    deliveryFee: 600,
+    minOrder: 1500,
+    isOpen: true,
+    isNew: true,
+    location: 'Ilisan-Remo',
+    tags: ['Healthy', 'New'],
+  },
+];
+
+export const PRODUCTS_SEED = [
+  /* Mama Tope's */
+  {
+    id: 'p_jollof_rice',
+    storeId: 's_mama_tope',
+    storeSlug: 'mama-tope',
+    slug: 'jollof-rice',
+    name: 'Smoky Party Jollof',
+    description:
+      'Slow-cooked party-style jollof with that signature smoky finish. Served with fried plantain.',
+    price: 3500,
+    image:
+      'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=1200&q=80',
+    category: 'local',
+    isPopular: true,
+    rating: 4.9,
+    reviews: 421,
+    options: [
+      {
+        id: 'protein',
+        name: 'Protein',
+        required: true,
+        multi: true,
+        choices: [
+          { id: 'chicken', name: 'Grilled Chicken', priceDelta: 0 },
+          { id: 'beef', name: 'Peppered Beef', priceDelta: 500 },
+          { id: 'fish', name: 'Fried Fish', priceDelta: 900 },
+          { id: 'goat', name: 'Smoky Goat Meat', priceDelta: 1200 },
+          { id: 'egg', name: 'Boiled Egg', priceDelta: 400 },
+        ],
+      },
+      {
+        id: 'extras',
+        name: 'Add on top',
+        multi: true,
+        choices: [
+          { id: 'beans', name: 'Beans on top', priceDelta: 500 },
+          { id: 'plantain', name: 'Fried Plantain', priceDelta: 500 },
+          { id: 'moimoi', name: 'Moi Moi', priceDelta: 700 },
+          { id: 'salad', name: 'Coleslaw', priceDelta: 600 },
+          { id: 'stew', name: 'Extra Stew', priceDelta: 300 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'p_white_rice',
+    storeId: 's_mama_tope',
+    storeSlug: 'mama-tope',
+    slug: 'white-rice-stew',
+    name: 'White Rice & Stew',
+    description:
+      'Fluffy white rice with rich tomato-pepper stew. Build your plate — pick your protein, then stack beans, plantain, or spaghetti on top.',
+    price: 1500,
+    image:
+      'https://images.unsplash.com/photo-1516684732162-798a0062be99?auto=format&fit=crop&w=1200&q=80',
+    category: 'local',
+    isPopular: true,
+    rating: 4.8,
+    reviews: 264,
+    options: [
+      {
+        id: 'portion',
+        name: 'Rice portion',
+        required: true,
+        choices: [
+          { id: 'one', name: '1 portion', priceDelta: 0 },
+          { id: 'one_half', name: '1½ portions', priceDelta: 600 },
+          { id: 'two', name: '2 portions', priceDelta: 1200 },
+        ],
+      },
+      {
+        id: 'protein',
+        name: 'Meat & fish',
+        required: true,
+        multi: true,
+        choices: [
+          { id: 'beef', name: 'Peppered Beef', priceDelta: 700 },
+          { id: 'fish', name: 'Fried Fish', priceDelta: 1200 },
+          { id: 'chicken', name: 'Fried Chicken', priceDelta: 1800 },
+          { id: 'turkey', name: 'Peppered Turkey', priceDelta: 2200 },
+          { id: 'egg', name: 'Boiled Egg', priceDelta: 400 },
+          { id: 'ponmo', name: 'Ponmo', priceDelta: 500 },
+        ],
+      },
+      {
+        id: 'toppings',
+        name: 'Add on top',
+        multi: true,
+        choices: [
+          { id: 'beans', name: 'Beans on top', priceDelta: 500 },
+          { id: 'plantain', name: 'Fried Plantain', priceDelta: 500 },
+          { id: 'spaghetti', name: 'Spaghetti on top', priceDelta: 400 },
+          { id: 'moimoi', name: 'Moi Moi', priceDelta: 700 },
+          { id: 'salad', name: 'Coleslaw', priceDelta: 600 },
+          { id: 'stew', name: 'Extra Stew', priceDelta: 300 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'p_fried_rice',
+    storeId: 's_mama_tope',
+    storeSlug: 'mama-tope',
+    slug: 'fried-rice',
+    name: 'Nigerian Fried Rice',
+    description:
+      'Party-style fried rice loaded with mixed veg and liver bits. Pick your protein and sides.',
+    price: 1800,
+    image:
+      'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=1200&q=80',
+    category: 'local',
+    rating: 4.7,
+    reviews: 173,
+    options: [
+      {
+        id: 'portion',
+        name: 'Rice portion',
+        required: true,
+        choices: [
+          { id: 'one', name: '1 portion', priceDelta: 0 },
+          { id: 'one_half', name: '1½ portions', priceDelta: 700 },
+          { id: 'two', name: '2 portions', priceDelta: 1400 },
+        ],
+      },
+      {
+        id: 'protein',
+        name: 'Meat & fish',
+        required: true,
+        multi: true,
+        choices: [
+          { id: 'chicken', name: 'Fried Chicken', priceDelta: 1800 },
+          { id: 'beef', name: 'Peppered Beef', priceDelta: 700 },
+          { id: 'fish', name: 'Fried Fish', priceDelta: 1200 },
+          { id: 'turkey', name: 'Peppered Turkey', priceDelta: 2200 },
+          { id: 'egg', name: 'Boiled Egg', priceDelta: 400 },
+        ],
+      },
+      {
+        id: 'toppings',
+        name: 'Sides',
+        multi: true,
+        choices: [
+          { id: 'plantain', name: 'Fried Plantain', priceDelta: 500 },
+          { id: 'moimoi', name: 'Moi Moi', priceDelta: 700 },
+          { id: 'salad', name: 'Coleslaw', priceDelta: 600 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'p_spaghetti',
+    storeId: 's_mama_tope',
+    storeSlug: 'mama-tope',
+    slug: 'jollof-spaghetti',
+    name: 'Jollof Spaghetti',
+    description:
+      'Smoky jollof-style spaghetti tossed in pepper sauce. Choose your protein and what goes on top.',
+    price: 1700,
+    image:
+      'https://images.unsplash.com/photo-1551892374-ecf8754cf8b0?auto=format&fit=crop&w=1200&q=80',
+    category: 'local',
+    isNew: true,
+    rating: 4.6,
+    reviews: 87,
+    options: [
+      {
+        id: 'portion',
+        name: 'Portion',
+        required: true,
+        choices: [
+          { id: 'one', name: '1 portion', priceDelta: 0 },
+          { id: 'two', name: '2 portions', priceDelta: 1300 },
+        ],
+      },
+      {
+        id: 'protein',
+        name: 'Meat & fish',
+        required: true,
+        multi: true,
+        choices: [
+          { id: 'beef', name: 'Peppered Beef', priceDelta: 700 },
+          { id: 'fish', name: 'Fried Fish', priceDelta: 1200 },
+          { id: 'chicken', name: 'Fried Chicken', priceDelta: 1800 },
+          { id: 'turkey', name: 'Peppered Turkey', priceDelta: 2200 },
+          { id: 'egg', name: 'Boiled Egg', priceDelta: 400 },
+        ],
+      },
+      {
+        id: 'toppings',
+        name: 'Add on top',
+        multi: true,
+        choices: [
+          { id: 'beans', name: 'Beans on top', priceDelta: 500 },
+          { id: 'plantain', name: 'Fried Plantain', priceDelta: 500 },
+          { id: 'stew', name: 'Extra Sauce', priceDelta: 300 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'p_beans',
+    storeId: 's_mama_tope',
+    storeSlug: 'mama-tope',
+    slug: 'ewa-agoyin',
+    name: 'Ewa Agoyin (Beans)',
+    description:
+      'Soft-mashed beans with smoky palm-oil pepper sauce. Pair with bread, plantain, or rice — your call.',
+    price: 1300,
+    image:
+      'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=80',
+    category: 'local',
+    isPopular: true,
+    rating: 4.7,
+    reviews: 145,
+    options: [
+      {
+        id: 'portion',
+        name: 'Beans portion',
+        required: true,
+        choices: [
+          { id: 'one', name: '1 portion', priceDelta: 0 },
+          { id: 'one_half', name: '1½ portions', priceDelta: 500 },
+          { id: 'two', name: '2 portions', priceDelta: 1000 },
+        ],
+      },
+      {
+        id: 'pairing',
+        name: 'Pair it with',
+        multi: true,
+        choices: [
+          { id: 'bread', name: 'Agege Bread', priceDelta: 500 },
+          { id: 'plantain', name: 'Fried Plantain', priceDelta: 500 },
+          { id: 'rice', name: 'White Rice', priceDelta: 700 },
+          { id: 'garri', name: 'Garri (soaked-ready)', priceDelta: 200 },
+        ],
+      },
+      {
+        id: 'protein',
+        name: 'Meat & fish (optional)',
+        multi: true,
+        choices: [
+          { id: 'fish', name: 'Fried Fish', priceDelta: 1200 },
+          { id: 'beef', name: 'Peppered Beef', priceDelta: 700 },
+          { id: 'egg', name: 'Boiled Egg', priceDelta: 400 },
+          { id: 'ponmo', name: 'Ponmo', priceDelta: 500 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'p_efo_riro',
+    storeId: 's_mama_tope',
+    storeSlug: 'mama-tope',
+    slug: 'efo-riro',
+    name: 'Efo Riro & Pounded Yam',
+    description:
+      'Rich palm-oil simmered spinach stew packed with assorted meat, served with smooth pounded yam.',
+    price: 4200,
+    image:
+      'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=1200&q=80',
+    category: 'local',
+    isPopular: true,
+    rating: 4.8,
+    reviews: 198,
+  },
+  {
+    id: 'p_ofada',
+    storeId: 's_mama_tope',
+    storeSlug: 'mama-tope',
+    slug: 'ofada-rice',
+    name: 'Ofada Rice & Ayamase',
+    description:
+      'Local Ofada rice paired with our famous green-pepper ayamase stew, assorted offal optional.',
+    price: 3800,
+    image:
+      'https://images.unsplash.com/photo-1604329760661-e71dc83f8f26?auto=format&fit=crop&w=1200&q=80',
+    category: 'local',
+    rating: 4.7,
+    reviews: 156,
+  },
+  {
+    id: 'p_meat_pie',
+    storeId: 's_mama_tope',
+    storeSlug: 'mama-tope',
+    slug: 'meat-pie',
+    name: 'Classic Meat Pie',
+    description: 'Buttery pastry stuffed with seasoned mince beef and potatoes.',
+    price: 800,
+    image:
+      'https://images.unsplash.com/photo-1568051243851-f9b136146e97?auto=format&fit=crop&w=1200&q=80',
+    category: 'snacks',
+    rating: 4.6,
+    reviews: 89,
+  },
+
+  /* Babrite Pizzeria */
+  {
+    id: 'p_pepperoni',
+    storeId: 's_babrite',
+    storeSlug: 'babrite',
+    slug: 'pepperoni',
+    name: 'Classic Pepperoni',
+    description:
+      'Wood-fired with our house tomato base, mozzarella, and a generous layer of spicy pepperoni.',
+    price: 8500,
+    oldPrice: 9500,
+    image:
+      'https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=1200&q=80',
+    category: 'pizza',
+    isPopular: true,
+    rating: 4.8,
+    reviews: 312,
+    options: [
+      {
+        id: 'size',
+        name: 'Size',
+        required: true,
+        choices: [
+          { id: 'small', name: 'Small (9")', priceDelta: 0 },
+          { id: 'medium', name: 'Medium (12")', priceDelta: 2500 },
+          { id: 'large', name: 'Large (14")', priceDelta: 4500 },
+        ],
+      },
+      {
+        id: 'crust',
+        name: 'Crust',
+        required: true,
+        choices: [
+          { id: 'thin', name: 'Thin Crust', priceDelta: 0 },
+          { id: 'thick', name: 'Hand-tossed', priceDelta: 0 },
+          { id: 'stuffed', name: 'Cheese-stuffed', priceDelta: 1500 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'p_bbq_chicken',
+    storeId: 's_babrite',
+    storeSlug: 'babrite',
+    slug: 'bbq-chicken',
+    name: 'BBQ Chicken Pizza',
+    description:
+      'Smoky BBQ sauce, grilled chicken, red onions, and mozzarella over our hand-tossed base.',
+    price: 9000,
+    image:
+      'https://images.unsplash.com/photo-1571066811602-716837d681de?auto=format&fit=crop&w=1200&q=80',
+    category: 'pizza',
+    isPopular: true,
+    rating: 4.7,
+    reviews: 245,
+  },
+  {
+    id: 'p_margherita',
+    storeId: 's_babrite',
+    storeSlug: 'babrite',
+    slug: 'margherita',
+    name: 'Margherita',
+    description:
+      'Fresh mozzarella, San Marzano tomato, basil, and a finish of olive oil. Simple and perfect.',
+    price: 7500,
+    image:
+      'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=1200&q=80',
+    category: 'pizza',
+    rating: 4.6,
+    reviews: 178,
+  },
+  {
+    id: 'p_garlic_bread',
+    storeId: 's_babrite',
+    storeSlug: 'babrite',
+    slug: 'garlic-bread',
+    name: 'Cheesy Garlic Bread',
+    description: 'Wood-fired garlic flatbread with melted mozzarella and parsley.',
+    price: 3200,
+    image:
+      'https://images.unsplash.com/photo-1573140247632-f8fd74997d5c?auto=format&fit=crop&w=1200&q=80',
+    category: 'snacks',
+    rating: 4.5,
+    reviews: 92,
+  },
+
+  /* Sweet Layers */
+  {
+    id: 'p_red_velvet',
+    storeId: 's_sweet_layers',
+    storeSlug: 'sweet-layers',
+    slug: 'red-velvet-cake',
+    name: 'Red Velvet Layer Cake',
+    description: 'Three layers of moist red velvet sponge with cream cheese frosting.',
+    price: 18000,
+    image:
+      'https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?auto=format&fit=crop&w=1200&q=80',
+    category: 'cakes',
+    isPopular: true,
+    rating: 4.9,
+    reviews: 142,
+    options: [
+      {
+        id: 'size',
+        name: 'Size',
+        required: true,
+        choices: [
+          { id: '6in', name: '6 inch (serves 8)', priceDelta: 0 },
+          { id: '8in', name: '8 inch (serves 14)', priceDelta: 7000 },
+          { id: '10in', name: '10 inch (serves 22)', priceDelta: 14000 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'p_chocolate_cake',
+    storeId: 's_sweet_layers',
+    storeSlug: 'sweet-layers',
+    slug: 'chocolate-fudge',
+    name: 'Chocolate Fudge Cake',
+    description: 'Decadent chocolate sponge layered with rich fudge and dark chocolate ganache.',
+    price: 17500,
+    image:
+      'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=1200&q=80',
+    category: 'cakes',
+    rating: 4.8,
+    reviews: 98,
+  },
+  {
+    id: 'p_cupcakes',
+    storeId: 's_sweet_layers',
+    storeSlug: 'sweet-layers',
+    slug: 'vanilla-cupcakes',
+    name: 'Vanilla Cupcakes (Box of 6)',
+    description: 'Light vanilla cupcakes with swirled buttercream and edible sprinkles.',
+    price: 6500,
+    image:
+      'https://images.unsplash.com/photo-1599785209707-a456fc1337bb?auto=format&fit=crop&w=1200&q=80',
+    category: 'cakes',
+    rating: 4.7,
+    reviews: 64,
+  },
+  {
+    id: 'p_donuts',
+    storeId: 's_sweet_layers',
+    storeSlug: 'sweet-layers',
+    slug: 'glazed-donuts',
+    name: 'Glazed Donuts (4 pack)',
+    description: 'Pillowy soft donuts dipped in vanilla sugar glaze.',
+    price: 3500,
+    image:
+      'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=1200&q=80',
+    category: 'snacks',
+    rating: 4.5,
+    reviews: 41,
+  },
+
+  /* Burger Lab */
+  {
+    id: 'p_classic_smash',
+    storeId: 's_burger_lab',
+    storeSlug: 'burger-lab',
+    slug: 'classic-smash',
+    name: 'Classic Smash Burger',
+    description:
+      'Smashed beef patty, american cheese, lettuce, pickles, and house sauce on a brioche bun.',
+    price: 5500,
+    image:
+      'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1200&q=80',
+    category: 'burgers',
+    isPopular: true,
+    rating: 4.7,
+    reviews: 187,
+    options: [
+      {
+        id: 'patty',
+        name: 'Patty',
+        required: true,
+        choices: [
+          { id: 'single', name: 'Single Patty', priceDelta: 0 },
+          { id: 'double', name: 'Double Patty', priceDelta: 1800 },
+          { id: 'triple', name: 'Triple Patty', priceDelta: 3400 },
+        ],
+      },
+      {
+        id: 'extras',
+        name: 'Add Ons',
+        multi: true,
+        choices: [
+          { id: 'bacon', name: 'Crispy Bacon', priceDelta: 800 },
+          { id: 'egg', name: 'Fried Egg', priceDelta: 500 },
+          { id: 'cheese', name: 'Extra Cheese', priceDelta: 600 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'p_chicken_burger',
+    storeId: 's_burger_lab',
+    storeSlug: 'burger-lab',
+    slug: 'spicy-chicken-burger',
+    name: 'Spicy Chicken Burger',
+    description: 'Crispy buttermilk-fried chicken thigh with house hot sauce and slaw.',
+    price: 5000,
+    image:
+      'https://images.unsplash.com/photo-1606755962773-d324e0a13086?auto=format&fit=crop&w=1200&q=80',
+    category: 'burgers',
+    rating: 4.6,
+    reviews: 134,
+  },
+  {
+    id: 'p_loaded_fries',
+    storeId: 's_burger_lab',
+    storeSlug: 'burger-lab',
+    slug: 'loaded-fries',
+    name: 'Loaded Cheese Fries',
+    description: 'Crinkle-cut fries smothered in cheese sauce, jalapeños, and crispy bacon bits.',
+    price: 3800,
+    image:
+      'https://images.unsplash.com/photo-1639024471283-03518883512d?auto=format&fit=crop&w=1200&q=80',
+    category: 'snacks',
+    rating: 4.6,
+    reviews: 98,
+  },
+  {
+    id: 'p_milkshake',
+    storeId: 's_burger_lab',
+    storeSlug: 'burger-lab',
+    slug: 'vanilla-milkshake',
+    name: 'Vanilla Bean Milkshake',
+    description: 'Hand-spun thick vanilla milkshake topped with whipped cream.',
+    price: 2800,
+    image:
+      'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=1200&q=80',
+    category: 'drinks',
+    rating: 4.5,
+    reviews: 51,
+  },
+
+  /* Shawarma King */
+  {
+    id: 'p_beef_shawarma',
+    storeId: 's_shawarma_king',
+    storeSlug: 'shawarma-king',
+    slug: 'beef-shawarma',
+    name: 'Beef Shawarma Wrap',
+    description:
+      'Slow-spiced beef stacked with veggies, garlic sauce, and hot sauce in a toasted wrap.',
+    price: 3500,
+    image:
+      'https://images.unsplash.com/photo-1633321702518-7feccafb94d5?auto=format&fit=crop&w=1200&q=80',
+    category: 'shawarma',
+    isPopular: true,
+    rating: 4.6,
+    reviews: 234,
+    options: [
+      {
+        id: 'size',
+        name: 'Size',
+        required: true,
+        choices: [
+          { id: 'regular', name: 'Regular', priceDelta: 0 },
+          { id: 'large', name: 'Large', priceDelta: 1500 },
+          { id: 'xl', name: 'Triple XL', priceDelta: 3000 },
+        ],
+      },
+      {
+        id: 'spice',
+        name: 'Spice Level',
+        required: true,
+        choices: [
+          { id: 'mild', name: 'Mild', priceDelta: 0 },
+          { id: 'medium', name: 'Medium', priceDelta: 0 },
+          { id: 'hot', name: 'Hot 🔥', priceDelta: 0 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'p_chicken_shawarma',
+    storeId: 's_shawarma_king',
+    storeSlug: 'shawarma-king',
+    slug: 'chicken-shawarma',
+    name: 'Chicken Shawarma Wrap',
+    description:
+      'Marinated chicken thighs grilled to order, wrapped with crisp veggies and creamy sauce.',
+    price: 3200,
+    image:
+      'https://images.unsplash.com/photo-1561651823-34feb02250e4?auto=format&fit=crop&w=1200&q=80',
+    category: 'shawarma',
+    rating: 4.5,
+    reviews: 167,
+  },
+  {
+    id: 'p_chicken_wings',
+    storeId: 's_shawarma_king',
+    storeSlug: 'shawarma-king',
+    slug: 'honey-bbq-wings',
+    name: 'Honey BBQ Wings (8 pcs)',
+    description: 'Crispy wings tossed in sticky honey BBQ glaze. Served with ranch dip.',
+    price: 4500,
+    image:
+      'https://images.unsplash.com/photo-1608039755401-742074f0548d?auto=format&fit=crop&w=1200&q=80',
+    category: 'snacks',
+    rating: 4.5,
+    reviews: 78,
+  },
+  {
+    id: 'p_pepsi',
+    storeId: 's_shawarma_king',
+    storeSlug: 'shawarma-king',
+    slug: 'soft-drink',
+    name: 'Chilled Soft Drink',
+    description: '50cl bottle, ice cold.',
+    price: 600,
+    image:
+      'https://images.unsplash.com/photo-1581636625402-29b2a704ef13?auto=format&fit=crop&w=1200&q=80',
+    category: 'drinks',
+    rating: 4.4,
+    reviews: 22,
+  },
+
+  /* Fresh Press */
+  {
+    id: 'p_mango_smoothie',
+    storeId: 's_juice_bar',
+    storeSlug: 'fresh-press',
+    slug: 'mango-tango',
+    name: 'Mango Tango Smoothie',
+    description: 'Ripe mango, banana, pineapple, and a hint of ginger blended with coconut milk.',
+    price: 2500,
+    image:
+      'https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=1200&q=80',
+    category: 'smoothies',
+    isPopular: true,
+    rating: 4.7,
+    reviews: 89,
+    isNew: true,
+  },
+  {
+    id: 'p_berry_blast',
+    storeId: 's_juice_bar',
+    storeSlug: 'fresh-press',
+    slug: 'berry-blast',
+    name: 'Berry Blast Smoothie',
+    description: 'Strawberry, blueberry, banana, and Greek yoghurt — antioxidants on the move.',
+    price: 2800,
+    image:
+      'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=1200&q=80',
+    category: 'smoothies',
+    rating: 4.6,
+    reviews: 56,
+  },
+  {
+    id: 'p_orange_juice',
+    storeId: 's_juice_bar',
+    storeSlug: 'fresh-press',
+    slug: 'fresh-orange',
+    name: 'Fresh Orange Press',
+    description: '100% cold-pressed orange juice. No sugar, no water added.',
+    price: 1800,
+    image:
+      'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=1200&q=80',
+    category: 'drinks',
+    rating: 4.7,
+    reviews: 41,
+  },
+  {
+    id: 'p_green_juice',
+    storeId: 's_juice_bar',
+    storeSlug: 'fresh-press',
+    slug: 'green-glow',
+    name: 'Green Glow',
+    description: 'Cucumber, apple, spinach, lemon, and ginger. Earthy, sweet, energising.',
+    price: 2200,
+    image:
+      'https://images.unsplash.com/photo-1610970881699-44a5587cabec?auto=format&fit=crop&w=1200&q=80',
+    category: 'drinks',
+    isNew: true,
+    rating: 4.5,
+    reviews: 24,
+  },
+];
