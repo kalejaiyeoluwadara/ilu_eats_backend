@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -55,17 +56,32 @@ export class PaymentsService {
     return key;
   }
 
-  private async paystackFetch<T>(path: string, init?: RequestInit): Promise<T> {
-    const res = await fetch(`${PAYSTACK_BASE_URL}${path}`, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${this.secretKey}`,
-        'Content-Type': 'application/json',
-        ...init?.headers,
-      },
-    });
+  private async paystackFetch<T extends { status: boolean }>(
+    path: string,
+    init?: RequestInit,
+  ): Promise<T> {
+    let res: Response;
+    try {
+      res = await fetch(`${PAYSTACK_BASE_URL}${path}`, {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${this.secretKey}`,
+          'Content-Type': 'application/json',
+          ...init?.headers,
+        },
+      });
+    } catch (err) {
+      this.logger.error(`Paystack request to ${path} failed: ${err}`);
+      throw new BadRequestException(
+        'Could not reach Paystack. Please try again shortly.',
+      );
+    }
+
     const body = (await res.json()) as T & { message?: string };
-    if (!res.ok) {
+    if (!res.ok || !body?.status) {
+      this.logger.error(
+        `Paystack request to ${path} returned an error: ${body?.message ?? 'unknown error'}`,
+      );
       throw new BadRequestException(
         body?.message ?? 'Paystack request failed',
       );
@@ -89,7 +105,7 @@ export class PaymentsService {
       throw new BadRequestException('Order has already been paid for');
     }
 
-    const reference = `${order.orderCode}-${Date.now()}`;
+    const reference = `${order.orderCode}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
     const callbackUrl = this.config.get<string>('paystack.callbackUrl');
 
     const response = await this.paystackFetch<PaystackInitializeResponse>(
@@ -122,6 +138,9 @@ export class PaymentsService {
       paymentReference: reference,
     });
     if (!order) throw new NotFoundException('Payment reference not found');
+    if (String(order.userId) !== userId) {
+      throw new ForbiddenException('You do not have access to this payment');
+    }
 
     if (order.paymentStatus === PaymentStatus.Paid) {
       return { status: order.paymentStatus, order: order.orderCode };
@@ -132,6 +151,13 @@ export class PaymentsService {
     );
 
     await this.applyVerificationResult(order, response.data);
+
+    if (response.data.status !== 'success') {
+      this.logger.warn(
+        `Verification for ${reference} resolved to '${response.data.status}' (amount ${response.data.amount}, expected ${Math.round(order.total * 100)})`,
+      );
+    }
+
     return { status: order.paymentStatus, order: order.orderCode };
   }
 
@@ -156,7 +182,10 @@ export class PaymentsService {
       .createHmac('sha512', this.secretKey)
       .update(rawBody)
       .digest('hex');
-    return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature));
+    const hashBuf = Buffer.from(hash);
+    const sigBuf = Buffer.from(signature);
+    if (hashBuf.length !== sigBuf.length) return false;
+    return crypto.timingSafeEqual(hashBuf, sigBuf);
   }
 
   async handleWebhookEvent(rawBody: Buffer, signature: string | undefined) {

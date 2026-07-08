@@ -27,7 +27,15 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   [PaymentMethod.Cash]: 'Cash on Delivery',
 };
 
-const SERVICE_FEE_PERCENT = 0.03;
+/**
+ * Mirrors the frontend's checkout display formula exactly (app/checkout/page.tsx)
+ * so the amount shown to the customer always matches what Paystack actually charges.
+ */
+function computeServiceFee(subtotal: number): number {
+  if (subtotal <= 0) return 0;
+  return Math.min(500, Math.max(100, Math.round((subtotal * 0.05) / 50) * 50));
+}
+
 const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   [OrderStatus.New]: [OrderStatus.Preparing],
   [OrderStatus.Preparing]: [OrderStatus.Out],
@@ -145,7 +153,7 @@ export class OrdersService {
     }
 
     const deliveryFee = store.deliveryFee;
-    const serviceFee = Math.round(subtotal * SERVICE_FEE_PERCENT);
+    const serviceFee = computeServiceFee(subtotal);
     const total = subtotal + deliveryFee + serviceFee;
 
     const deliveryAddress =
