@@ -30,6 +30,16 @@ export class CatalogController {
     return this.catalogService.findFeaturedProducts();
   }
 
+  @Get('products/by-ids')
+  async findProductsByIds(@Query('ids') ids?: string) {
+    const items = ids
+      ? await this.catalogService.findProductsByIds(
+          ids.split(',').filter(Boolean),
+        )
+      : [];
+    return { items };
+  }
+
   @Get('products/:storeSlug/:productSlug')
   findProduct(
     @Param('storeSlug') storeSlug: string,
