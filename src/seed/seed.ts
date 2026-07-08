@@ -2,7 +2,8 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 import { StoreSchema } from '../modules/catalog/schemas/store.schema';
 import { ProductSchema } from '../modules/catalog/schemas/product.schema';
-import { STORES_SEED, PRODUCTS_SEED } from './seed-data';
+import { BannerSchema } from '../modules/banners/schemas/banner.schema';
+import { STORES_SEED, PRODUCTS_SEED, BANNERS_SEED } from './seed-data';
 
 async function run() {
   const uri = process.env.MONGODB_URI;
@@ -11,6 +12,7 @@ async function run() {
   await mongoose.connect(uri);
   const StoreModel = mongoose.model('Store', StoreSchema);
   const ProductModel = mongoose.model('Product', ProductSchema);
+  const BannerModel = mongoose.model('Banner', BannerSchema);
 
   const storeIdBySlug = new Map<string, mongoose.Types.ObjectId>();
 
@@ -38,6 +40,15 @@ async function run() {
       { upsert: true, new: true },
     );
     console.log(`product upserted: ${product.storeSlug}/${product.slug}`);
+  }
+
+  for (const banner of BANNERS_SEED) {
+    await BannerModel.findOneAndUpdate(
+      { title: banner.title },
+      { $set: banner },
+      { upsert: true, new: true },
+    );
+    console.log(`banner upserted: ${banner.title}`);
   }
 
   await mongoose.disconnect();

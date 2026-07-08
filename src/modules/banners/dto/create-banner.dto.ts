@@ -19,4 +19,9 @@ export class CreateBannerDto {
   @IsOptional()
   @IsString()
   badge?: string;
+
+  /** Direct image URL, used when no file is uploaded. */
+  @IsOptional()
+  @IsString()
+  image?: string;
 }

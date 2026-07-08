@@ -23,12 +23,17 @@ export class BannersService {
   }
 
   async create(dto: CreateBannerDto, file?: Express.Multer.File) {
-    if (!file) throw new BadRequestException('Banner image is required');
-    const upload = await this.cloudinaryService.uploadFile(file, 'banners');
+    const { image: imageUrl, ...rest } = dto;
+    if (!file && !imageUrl) {
+      throw new BadRequestException('Banner image (file or URL) is required');
+    }
+    const image = file
+      ? (await this.cloudinaryService.uploadFile(file, 'banners')).secure_url
+      : (imageUrl as string);
     const count = await this.bannerModel.countDocuments();
     const banner = await this.bannerModel.create({
-      ...dto,
-      image: upload.secure_url,
+      ...rest,
+      image,
       order: count,
     });
     return banner.toObject();
@@ -38,10 +43,13 @@ export class BannersService {
     const banner = await this.bannerModel.findById(id);
     if (!banner) throw new NotFoundException('Banner not found');
 
-    Object.assign(banner, dto);
+    const { image: imageUrl, ...rest } = dto;
+    Object.assign(banner, rest);
     if (file) {
       const upload = await this.cloudinaryService.uploadFile(file, 'banners');
       banner.image = upload.secure_url;
+    } else if (imageUrl) {
+      banner.image = imageUrl;
     }
 
     await banner.save();

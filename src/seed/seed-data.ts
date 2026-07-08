@@ -1,4 +1,37 @@
-/** Seed data ported from the frontend's mockCatalog.seed.ts */
+/** Seed data ported from the frontend's mockCatalog.seed.ts / mockData.ts */
+
+export const BANNERS_SEED = [
+  {
+    title: '₦1,000 off your first order',
+    subtitle: 'Use code WELCOME at checkout — fresh from your ìlú.',
+    cta: 'Order now',
+    href: '/mama-tope',
+    image:
+      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1600&q=80',
+    badge: 'New users',
+    order: 0,
+  },
+  {
+    title: 'Pizza Friday — buy one get one 50% off',
+    subtitle: 'Wood-fired hot at Babrite, today only.',
+    cta: 'Grab a slice',
+    href: '/babrite',
+    image:
+      'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1600&q=80',
+    badge: 'Today only',
+    order: 1,
+  },
+  {
+    title: 'Custom cakes for your big moments',
+    subtitle: 'Order 24 hours ahead at Sweet Layers.',
+    cta: 'Browse cakes',
+    href: '/sweet-layers',
+    image:
+      'https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=1600&q=80',
+    badge: 'Featured',
+    order: 2,
+  },
+];
 
 export const STORES_SEED = [
   {
