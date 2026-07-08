@@ -36,6 +36,14 @@ export class AuthService {
     };
   }
 
+  async googleSync(name: string, email: string) {
+    const user = await this.usersService.findOrCreateOAuthUser(name, email);
+    return {
+      user: this.usersService.toPublicUser(user),
+      token: this.buildToken(user),
+    };
+  }
+
   async signin(dto: SigninDto) {
     const user = await this.usersService.validateCredentials(
       dto.email,

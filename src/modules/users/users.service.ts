@@ -47,6 +47,20 @@ export class UsersService {
     });
   }
 
+  async findOrCreateOAuthUser(name: string, email: string) {
+    let user = await this.findByEmail(email);
+    if (!user) {
+      const passwordHash = await bcrypt.hash(Math.random().toString(36), 10);
+      user = await this.userModel.create({
+        name,
+        email: email.toLowerCase().trim(),
+        passwordHash,
+        role: Role.Customer,
+      });
+    }
+    return user;
+  }
+
   async validateCredentials(email: string, password: string) {
     const user = await this.findByEmail(email);
     if (!user) return null;

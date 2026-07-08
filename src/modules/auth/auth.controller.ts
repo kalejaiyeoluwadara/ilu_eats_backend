@@ -9,6 +9,7 @@ import {
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { SigninDto } from './dto/signin.dto';
+import { GoogleSyncDto } from './dto/google-sync.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
@@ -25,6 +26,11 @@ export class AuthController {
   @Post('signin')
   signin(@Body() dto: SigninDto) {
     return this.authService.signin(dto);
+  }
+
+  @Post('google-sync')
+  googleSync(@Body() dto: GoogleSyncDto) {
+    return this.authService.googleSync(dto.name, dto.email);
   }
 
   @Post('signout')
