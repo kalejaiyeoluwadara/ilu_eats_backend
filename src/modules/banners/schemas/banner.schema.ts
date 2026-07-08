@@ -20,7 +20,7 @@ export class Banner {
   @Prop({ required: true })
   image: string;
 
-  @Prop({ default: null })
+  @Prop({ default: null, type: String })
   badge: string | null;
 
   @Prop({ default: 0 })

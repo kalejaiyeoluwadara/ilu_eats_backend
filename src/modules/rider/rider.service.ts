@@ -196,12 +196,12 @@ export class RiderService {
   }
 
   async getStatement(userId: string, from?: string, to?: string) {
+    const deliveredAtRange: { $gte?: Date; $lte?: Date } = {};
+    if (from) deliveredAtRange.$gte = new Date(from);
+    if (to) deliveredAtRange.$lte = new Date(to);
+
     const filter: Record<string, any> = { riderId: userId, status: 'done' };
-    if (from || to) {
-      filter.deliveredAt = {};
-      if (from) filter.deliveredAt.$gte = new Date(from);
-      if (to) filter.deliveredAt.$lte = new Date(to);
-    }
+    if (from || to) filter.deliveredAt = deliveredAtRange;
 
     const jobs = await this.jobModel.find(filter).sort({ deliveredAt: -1 });
     const rows = jobs.map((job) => ({
@@ -245,7 +245,7 @@ export class RiderService {
       type,
       url: upload.secure_url,
       status: 'pending',
-    } as any);
+    });
     await profile.save();
     return profile.toObject();
   }

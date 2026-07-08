@@ -40,7 +40,7 @@ export class RiderProfile {
   plateNumber: string;
 
   @Prop({ type: [RiderDocumentSchema], default: [] })
-  documents: RiderDocument[];
+  documents: Types.DocumentArray<RiderDocument>;
 }
 
 export type RiderProfileDocument = RiderProfile & Document;

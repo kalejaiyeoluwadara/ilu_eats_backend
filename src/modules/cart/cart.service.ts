@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { Cart, CartDocument } from './schemas/cart.schema';
 import { CatalogService } from '../catalog/catalog.service';
 import { AddCartItemDto } from './dto/add-cart-item.dto';

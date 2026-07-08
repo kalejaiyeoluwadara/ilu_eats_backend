@@ -56,16 +56,16 @@ export class Order {
   @Prop({ required: true, enum: DeliveryMode })
   deliveryMode: DeliveryMode;
 
-  @Prop({ default: null })
+  @Prop({ default: null, type: String })
   address: string | null;
 
-  @Prop({ default: null })
+  @Prop({ default: null, type: String })
   landmarkId: string | null;
 
   @Prop({ default: '' })
   deliveryAddress: string;
 
-  @Prop({ default: null })
+  @Prop({ default: null, type: String })
   notes: string | null;
 
   @Prop({ required: true, enum: PaymentMethod })

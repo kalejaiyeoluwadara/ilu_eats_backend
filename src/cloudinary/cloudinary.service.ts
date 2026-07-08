@@ -15,7 +15,10 @@ export class CloudinaryService {
       const uploadStream = this.cloudinary.uploader.upload_stream(
         { folder },
         (error, result) => {
-          if (error || !result) return reject(error);
+          if (error || !result)
+            return reject(
+              new Error(error?.message ?? 'Cloudinary upload failed'),
+            );
           resolve(result);
         },
       );

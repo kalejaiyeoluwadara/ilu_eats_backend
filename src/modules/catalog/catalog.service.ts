@@ -165,8 +165,7 @@ export class CatalogService {
       });
     }
 
-    const { slug, ...rest } = dto;
-    Object.assign(product, rest);
+    Object.assign(product, { ...dto, slug: product.slug });
 
     if (dto.price !== undefined) product.price = Math.round(dto.price);
     if (dto.oldPrice !== undefined) {

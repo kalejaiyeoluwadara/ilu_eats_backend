@@ -16,6 +16,7 @@ import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard)
 @Controller('users/me')
@@ -26,23 +27,26 @@ export class UsersController {
   ) {}
 
   @Patch()
-  updateMe(@CurrentUser() user: any, @Body() dto: UpdateUserDto) {
+  updateMe(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateUserDto) {
     return this.usersService.updateMe(user.id, dto);
   }
 
   @Get('addresses')
-  getAddresses(@CurrentUser() user: any) {
+  getAddresses(@CurrentUser() user: AuthenticatedUser) {
     return this.usersService.getAddresses(user.id);
   }
 
   @Post('addresses')
-  addAddress(@CurrentUser() user: any, @Body() dto: CreateAddressDto) {
+  addAddress(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateAddressDto,
+  ) {
     return this.usersService.addAddress(user.id, dto);
   }
 
   @Patch('addresses/:id')
   updateAddress(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdateAddressDto,
   ) {
@@ -50,17 +54,23 @@ export class UsersController {
   }
 
   @Delete('addresses/:id')
-  removeAddress(@CurrentUser() user: any, @Param('id') id: string) {
+  removeAddress(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     return this.usersService.removeAddress(user.id, id);
   }
 
   @Post('addresses/:id/default')
-  setDefaultAddress(@CurrentUser() user: any, @Param('id') id: string) {
+  setDefaultAddress(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     return this.usersService.setDefaultAddress(user.id, id);
   }
 
   @Get('favorites')
-  async getFavorites(@CurrentUser() user: any) {
+  async getFavorites(@CurrentUser() user: AuthenticatedUser) {
     const productIds = await this.usersService.getFavoriteIds(user.id);
     const products = await this.catalogService.findProductsByIds(productIds);
     const bySlugOrder = productIds
@@ -71,14 +81,17 @@ export class UsersController {
 
   @Post('favorites/:productId')
   @HttpCode(204)
-  addFavorite(@CurrentUser() user: any, @Param('productId') productId: string) {
+  addFavorite(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('productId') productId: string,
+  ) {
     return this.usersService.addFavorite(user.id, productId);
   }
 
   @Delete('favorites/:productId')
   @HttpCode(204)
   removeFavorite(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('productId') productId: string,
   ) {
     return this.usersService.removeFavorite(user.id, productId);

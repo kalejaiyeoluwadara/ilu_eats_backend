@@ -14,6 +14,7 @@ import { CartService } from '../cart/cart.service';
 import { UsersService } from '../users/users.service';
 import { resolveLinePrice } from '../../common/utils/pricing.util';
 import {
+  DeliveryMode,
   OrderStatus,
   PaymentMethod,
 } from '../../common/enums/order-status.enum';
@@ -144,7 +145,7 @@ export class OrdersService {
     const total = subtotal + deliveryFee + serviceFee;
 
     const deliveryAddress =
-      dto.deliveryMode === 'door'
+      dto.deliveryMode === DeliveryMode.Door
         ? (dto.address ?? '')
         : `Landmark: ${dto.landmarkId}`;
 

@@ -34,7 +34,7 @@ export class ProductOption {
 }
 export const ProductOptionSchema = SchemaFactory.createForClass(ProductOption);
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, suppressReservedKeysWarning: true })
 export class Product {
   _id: Types.ObjectId;
 
@@ -56,7 +56,7 @@ export class Product {
   @Prop({ required: true })
   price: number;
 
-  @Prop({ default: null })
+  @Prop({ default: null, type: Number })
   oldPrice: number | null;
 
   @Prop({ default: '' })

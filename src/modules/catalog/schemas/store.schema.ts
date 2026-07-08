@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { CategoryId } from '../../../common/enums/category.enum';
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, suppressReservedKeysWarning: true })
 export class Store {
   _id: Types.ObjectId;
 

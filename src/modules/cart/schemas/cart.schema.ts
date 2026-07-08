@@ -43,7 +43,7 @@ export class CartItem {
   @Prop({ required: true, default: 1 })
   quantity: number;
 
-  @Prop({ default: null })
+  @Prop({ default: null, type: String })
   notes: string | null;
 
   @Prop({ type: [SelectedOptionSchema], default: [] })

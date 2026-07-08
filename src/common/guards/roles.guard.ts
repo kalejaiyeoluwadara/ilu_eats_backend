@@ -7,6 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Role } from '../enums/role.enum';
 import { ROLES_KEY } from '../decorators/roles.decorator';
+import { AuthenticatedUser } from '../decorators/current-user.decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -19,7 +20,9 @@ export class RolesGuard implements CanActivate {
     ]);
     if (!requiredRoles || requiredRoles.length === 0) return true;
 
-    const { user } = context.switchToHttp().getRequest();
+    const { user } = context
+      .switchToHttp()
+      .getRequest<{ user: AuthenticatedUser }>();
     if (!user || !requiredRoles.includes(user.role)) {
       throw new ForbiddenException(
         'You do not have permission to access this resource',

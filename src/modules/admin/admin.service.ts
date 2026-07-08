@@ -44,7 +44,7 @@ export class AdminService {
 
     const [ordersToday, grossVolumeAgg, activeRiders] = await Promise.all([
       this.orderModel.countDocuments({ createdAt: { $gte: startOfDay } }),
-      this.orderModel.aggregate([
+      this.orderModel.aggregate<{ _id: null; total: number }>([
         { $match: { createdAt: { $gte: startOfDay } } },
         { $group: { _id: null, total: { $sum: '$total' } } },
       ]),

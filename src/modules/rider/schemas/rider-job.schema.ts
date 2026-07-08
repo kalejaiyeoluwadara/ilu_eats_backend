@@ -42,7 +42,7 @@ export class RiderJob {
   @Prop({ default: 0 })
   tip: number;
 
-  @Prop({ default: null })
+  @Prop({ default: null, type: Date })
   deliveredAt: Date | null;
 }
 

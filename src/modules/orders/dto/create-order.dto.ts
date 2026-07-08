@@ -49,11 +49,13 @@ export class CreateOrderDto {
   @IsEnum(DeliveryMode)
   deliveryMode: DeliveryMode;
 
-  @ValidateIf((dto) => dto.deliveryMode === DeliveryMode.Door)
+  @ValidateIf((dto: CreateOrderDto) => dto.deliveryMode === DeliveryMode.Door)
   @IsString()
   address?: string;
 
-  @ValidateIf((dto) => dto.deliveryMode === DeliveryMode.Landmark)
+  @ValidateIf(
+    (dto: CreateOrderDto) => dto.deliveryMode === DeliveryMode.Landmark,
+  )
   @IsString()
   landmarkId?: string;
 

@@ -11,6 +11,7 @@ import { SignupDto } from './dto/signup.dto';
 import { SigninDto } from './dto/signin.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -35,7 +36,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('session')
-  session(@CurrentUser() user: any) {
+  session(@CurrentUser() user: AuthenticatedUser) {
     return { user };
   }
 }

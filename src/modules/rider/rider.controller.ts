@@ -22,6 +22,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.Rider)
@@ -30,22 +31,28 @@ export class RiderController {
   constructor(private readonly riderService: RiderService) {}
 
   @Get('offers')
-  getOffers(@CurrentUser() user: any) {
+  getOffers(@CurrentUser() user: AuthenticatedUser) {
     return this.riderService.getOffers(user.id);
   }
 
   @Post('online')
-  setOnline(@CurrentUser() user: any, @Body() dto: SetOnlineDto) {
+  setOnline(@CurrentUser() user: AuthenticatedUser, @Body() dto: SetOnlineDto) {
     return this.riderService.setOnline(user.id, dto.isOnline);
   }
 
   @Post('offers/:offerId/accept')
-  acceptOffer(@CurrentUser() user: any, @Param('offerId') offerId: string) {
+  acceptOffer(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('offerId') offerId: string,
+  ) {
     return this.riderService.acceptOffer(user.id, offerId);
   }
 
   @Get('jobs')
-  getJobs(@CurrentUser() user: any, @Query() query: QueryJobsDto) {
+  getJobs(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: QueryJobsDto,
+  ) {
     return this.riderService.getJobs(
       user.id,
       query.status,
@@ -55,22 +62,31 @@ export class RiderController {
   }
 
   @Post('jobs/:jobId/pickup')
-  pickup(@CurrentUser() user: any, @Param('jobId') jobId: string) {
+  pickup(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('jobId') jobId: string,
+  ) {
     return this.riderService.pickup(user.id, jobId);
   }
 
   @Post('jobs/:jobId/deliver')
-  deliver(@CurrentUser() user: any, @Param('jobId') jobId: string) {
+  deliver(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('jobId') jobId: string,
+  ) {
     return this.riderService.deliver(user.id, jobId);
   }
 
   @Get('earnings/summary')
-  getEarningsSummary(@CurrentUser() user: any) {
+  getEarningsSummary(@CurrentUser() user: AuthenticatedUser) {
     return this.riderService.getEarningsSummary(user.id);
   }
 
   @Get('earnings/ledger')
-  getEarningsLedger(@CurrentUser() user: any, @Query() query: QueryJobsDto) {
+  getEarningsLedger(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: QueryJobsDto,
+  ) {
     return this.riderService.getEarningsLedger(
       user.id,
       query.page,
@@ -82,7 +98,7 @@ export class RiderController {
   @Header('Content-Type', 'text/csv')
   @Header('Content-Disposition', 'attachment; filename="statement.csv"')
   getStatement(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Query('from') from?: string,
     @Query('to') to?: string,
   ) {
@@ -90,19 +106,22 @@ export class RiderController {
   }
 
   @Get('profile')
-  getProfile(@CurrentUser() user: any) {
+  getProfile(@CurrentUser() user: AuthenticatedUser) {
     return this.riderService.getProfile(user.id);
   }
 
   @Patch('profile')
-  updateProfile(@CurrentUser() user: any, @Body() dto: UpdateRiderProfileDto) {
+  updateProfile(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateRiderProfileDto,
+  ) {
     return this.riderService.updateProfile(user.id, dto);
   }
 
   @Post('documents')
   @UseInterceptors(FileInterceptor('file'))
   addDocument(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UploadDocumentDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
