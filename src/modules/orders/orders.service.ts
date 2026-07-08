@@ -17,6 +17,7 @@ import {
   DeliveryMode,
   OrderStatus,
   PaymentMethod,
+  PaymentStatus,
 } from '../../common/enums/order-status.enum';
 import { paginate } from '../../common/dto/paginated-result.dto';
 

@@ -6,7 +6,7 @@ import { AppModule } from './app.module';
 import { TransformMongoInterceptor } from './common/interceptors/transform-mongo.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService);
 
   app.use(helmet());

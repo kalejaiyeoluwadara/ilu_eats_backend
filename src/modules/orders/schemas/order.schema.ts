@@ -4,6 +4,7 @@ import {
   DeliveryMode,
   OrderStatus,
   PaymentMethod,
+  PaymentStatus,
 } from '../../../common/enums/order-status.enum';
 
 @Schema({ _id: false })
@@ -73,6 +74,19 @@ export class Order {
 
   @Prop({ required: true })
   paymentLabel: string;
+
+  @Prop({
+    required: true,
+    enum: PaymentStatus,
+    default: PaymentStatus.Pending,
+  })
+  paymentStatus: PaymentStatus;
+
+  @Prop({ default: null, type: String })
+  paymentReference: string | null;
+
+  @Prop({ default: null, type: Date })
+  paidAt: Date | null;
 
   @Prop({ type: [OrderLineItemSchema], default: [] })
   lineItems: OrderLineItem[];

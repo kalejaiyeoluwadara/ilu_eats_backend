@@ -11,6 +11,13 @@ export enum PaymentMethod {
   Cash = 'cash',
 }
 
+export enum PaymentStatus {
+  Pending = 'pending',
+  Paid = 'paid',
+  Failed = 'failed',
+  NotApplicable = 'not_applicable',
+}
+
 export enum DeliveryMode {
   Door = 'door',
   Landmark = 'landmark',

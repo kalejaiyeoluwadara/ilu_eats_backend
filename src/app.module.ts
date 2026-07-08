@@ -12,6 +12,7 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { BannersModule } from './modules/banners/banners.module';
 import { RiderModule } from './modules/rider/rider.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AdminModule } from './modules/admin/admin.module';
     CatalogModule,
     CartModule,
     OrdersModule,
+    PaymentsModule,
     BannersModule,
     RiderModule,
     AdminModule,
