@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Cart, CartDocument } from './schemas/cart.schema';
@@ -60,7 +64,7 @@ export class CartService {
     const store = await this.catalogService.getStoreDocById(product.storeId.toString());
 
     if (cart.items.length > 0 && !cart.items[0].storeId.equals(store._id)) {
-      throw new BadRequestException({ error: 'different-store' });
+      throw new ConflictException({ error: 'different-store' });
     }
 
     const { unitPrice, resolvedOptions } = resolveLinePrice(product, dto.selectedOptions);
