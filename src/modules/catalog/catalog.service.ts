@@ -33,7 +33,10 @@ export class CatalogService {
     if (query.q) {
       filter.$text = { $search: query.q };
     }
-    const items = await this.storeModel.find(filter).sort({ createdAt: -1 }).lean();
+    const items = await this.storeModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
     return { items };
   }
 
@@ -72,19 +75,29 @@ export class CatalogService {
   }
 
   async search(q: string, type: 'all' | 'stores' | 'dishes' = 'all') {
-    const result: { stores: any[]; products: any[] } = { stores: [], products: [] };
+    const result: { stores: any[]; products: any[] } = {
+      stores: [],
+      products: [],
+    };
     if (!q) return result;
     if (type === 'all' || type === 'stores') {
-      result.stores = await this.storeModel.find({ $text: { $search: q } }).lean();
+      result.stores = await this.storeModel
+        .find({ $text: { $search: q } })
+        .lean();
     }
     if (type === 'all' || type === 'dishes') {
-      result.products = await this.productModel.find({ $text: { $search: q } }).lean();
+      result.products = await this.productModel
+        .find({ $text: { $search: q } })
+        .lean();
     }
     return result;
   }
 
   async createStore(dto: CreateStoreDto) {
-    const slug = await generateUniqueSlug(this.storeModel, dto.slug || dto.name);
+    const slug = await generateUniqueSlug(
+      this.storeModel,
+      dto.slug || dto.name,
+    );
     const store = await this.storeModel.create({
       ...dto,
       slug,
@@ -118,12 +131,17 @@ export class CatalogService {
 
   async createProduct(storeId: string, dto: CreateProductDto) {
     const store = await this.findStoreOrThrow(storeId);
-    const slug = await generateUniqueSlug(this.productModel, dto.slug || dto.name, {
-      storeId: store._id,
-    });
+    const slug = await generateUniqueSlug(
+      this.productModel,
+      dto.slug || dto.name,
+      {
+        storeId: store._id,
+      },
+    );
 
     const price = Math.round(dto.price);
-    const oldPrice = dto.oldPrice && dto.oldPrice > 0 ? Math.round(dto.oldPrice) : null;
+    const oldPrice =
+      dto.oldPrice && dto.oldPrice > 0 ? Math.round(dto.oldPrice) : null;
 
     const product = await this.productModel.create({
       ...dto,
@@ -160,7 +178,8 @@ export class CatalogService {
   }
 
   async deleteProduct(id: string) {
-    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid product id');
+    if (!Types.ObjectId.isValid(id))
+      throw new BadRequestException('Invalid product id');
     const result = await this.productModel.findByIdAndDelete(id);
     if (!result) throw new NotFoundException('Product not found');
   }
@@ -170,7 +189,8 @@ export class CatalogService {
   }
 
   async getProductDocById(id: string) {
-    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Product not found');
+    if (!Types.ObjectId.isValid(id))
+      throw new NotFoundException('Product not found');
     const product = await this.productModel.findById(id);
     if (!product) throw new NotFoundException('Product not found');
     return product;

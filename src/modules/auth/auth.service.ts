@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { SignupDto } from './dto/signup.dto';
@@ -21,18 +25,33 @@ export class AuthService {
   }
 
   async signup(dto: SignupDto) {
-    const user = await this.usersService.createCustomer(dto.name, dto.email, dto.password);
-    return { user: this.usersService.toPublicUser(user), token: this.buildToken(user) };
+    const user = await this.usersService.createCustomer(
+      dto.name,
+      dto.email,
+      dto.password,
+    );
+    return {
+      user: this.usersService.toPublicUser(user),
+      token: this.buildToken(user),
+    };
   }
 
   async signin(dto: SigninDto) {
-    const user = await this.usersService.validateCredentials(dto.email, dto.password);
+    const user = await this.usersService.validateCredentials(
+      dto.email,
+      dto.password,
+    );
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     if (dto.allowedRoles?.length && !dto.allowedRoles.includes(user.role)) {
-      throw new ForbiddenException('Account role not permitted for this portal');
+      throw new ForbiddenException(
+        'Account role not permitted for this portal',
+      );
     }
 
-    return { user: this.usersService.toPublicUser(user), token: this.buildToken(user) };
+    return {
+      user: this.usersService.toPublicUser(user),
+      token: this.buildToken(user),
+    };
   }
 }

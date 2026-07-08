@@ -20,9 +20,19 @@ export class CartService {
 
   private serialize(cart: CartDocument | null) {
     if (!cart || cart.items.length === 0) {
-      return { items: [], storeId: null, storeSlug: null, storeName: null, subtotal: 0, count: 0 };
+      return {
+        items: [],
+        storeId: null,
+        storeSlug: null,
+        storeName: null,
+        subtotal: 0,
+        count: 0,
+      };
     }
-    const subtotal = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const subtotal = cart.items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
     const count = cart.items.reduce((sum, item) => sum + item.quantity, 0);
     const first = cart.items[0];
     return {
@@ -61,13 +71,18 @@ export class CartService {
   async addItem(userId: string, dto: AddCartItemDto) {
     const cart = await this.getOrCreateCart(userId);
     const product = await this.catalogService.getProductDocById(dto.productId);
-    const store = await this.catalogService.getStoreDocById(product.storeId.toString());
+    const store = await this.catalogService.getStoreDocById(
+      product.storeId.toString(),
+    );
 
     if (cart.items.length > 0 && !cart.items[0].storeId.equals(store._id)) {
       throw new ConflictException({ error: 'different-store' });
     }
 
-    const { unitPrice, resolvedOptions } = resolveLinePrice(product, dto.selectedOptions);
+    const { unitPrice, resolvedOptions } = resolveLinePrice(
+      product,
+      dto.selectedOptions,
+    );
 
     cart.items.push({
       productId: product._id,
@@ -80,7 +95,7 @@ export class CartService {
       quantity: dto.quantity,
       notes: dto.notes ?? null,
       selectedOptions: resolvedOptions,
-    } as any);
+    });
 
     await cart.save();
     return this.serialize(cart);
@@ -112,6 +127,10 @@ export class CartService {
   }
 
   async clearCart(userId: string) {
-    await this.cartModel.updateOne({ userId }, { $set: { items: [] } }, { upsert: true });
+    await this.cartModel.updateOne(
+      { userId },
+      { $set: { items: [] } },
+      { upsert: true },
+    );
   }
 }

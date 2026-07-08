@@ -23,7 +23,7 @@ export class User {
   role: Role;
 
   @Prop({ type: [AddressSchema], default: [] })
-  addresses: Address[];
+  addresses: Types.DocumentArray<Address>;
 
   @Prop({ type: [String], default: [] })
   favoriteProductIds: string[];

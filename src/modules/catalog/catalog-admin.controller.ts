@@ -34,7 +34,10 @@ export class CatalogAdminController {
   }
 
   @Post('stores/:storeId/menu-items')
-  createProduct(@Param('storeId') storeId: string, @Body() dto: CreateProductDto) {
+  createProduct(
+    @Param('storeId') storeId: string,
+    @Body() dto: CreateProductDto,
+  ) {
     return this.catalogService.createProduct(storeId, dto);
   }
 

@@ -7,7 +7,10 @@ import { CLOUDINARY } from './cloudinary.provider';
 export class CloudinaryService {
   constructor(@Inject(CLOUDINARY) private readonly cloudinary: typeof v2) {}
 
-  uploadFile(file: Express.Multer.File, folder: string): Promise<UploadApiResponse> {
+  uploadFile(
+    file: Express.Multer.File,
+    folder: string,
+  ): Promise<UploadApiResponse> {
     return new Promise((resolve, reject) => {
       const uploadStream = this.cloudinary.uploader.upload_stream(
         { folder },

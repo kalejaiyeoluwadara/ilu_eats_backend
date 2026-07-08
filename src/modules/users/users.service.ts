@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
@@ -51,7 +55,9 @@ export class UsersService {
   }
 
   async updateMe(userId: string, dto: UpdateUserDto) {
-    const user = await this.userModel.findByIdAndUpdate(userId, dto, { new: true });
+    const user = await this.userModel.findByIdAndUpdate(userId, dto, {
+      new: true,
+    });
     if (!user) throw new NotFoundException('User not found');
     return this.toPublicUser(user);
   }
@@ -78,13 +84,17 @@ export class UsersService {
       addressLine: dto.addressLine,
       phone: dto.phone,
       isDefault,
-    } as any);
+    });
 
     await user.save();
     return { items: user.addresses };
   }
 
-  async updateAddress(userId: string, addressId: string, dto: UpdateAddressDto) {
+  async updateAddress(
+    userId: string,
+    addressId: string,
+    dto: UpdateAddressDto,
+  ) {
     const user = await this.userModel.findById(userId);
     if (!user) throw new NotFoundException('User not found');
 

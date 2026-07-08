@@ -33,7 +33,10 @@ export class BannersController {
   @Roles(Role.Admin)
   @Post()
   @UseInterceptors(FileInterceptor('image'))
-  create(@Body() dto: CreateBannerDto, @UploadedFile() file: Express.Multer.File) {
+  create(
+    @Body() dto: CreateBannerDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
     return this.bannersService.create(dto, file);
   }
 

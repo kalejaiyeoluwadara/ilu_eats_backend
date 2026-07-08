@@ -13,7 +13,10 @@ import { CatalogService } from '../catalog/catalog.service';
 import { CartService } from '../cart/cart.service';
 import { UsersService } from '../users/users.service';
 import { resolveLinePrice } from '../../common/utils/pricing.util';
-import { OrderStatus, PaymentMethod } from '../../common/enums/order-status.enum';
+import {
+  OrderStatus,
+  PaymentMethod,
+} from '../../common/enums/order-status.enum';
 import { paginate } from '../../common/dto/paginated-result.dto';
 
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
@@ -100,13 +103,26 @@ export class OrdersService {
     const store = await this.catalogService.getStoreDocById(dto.storeId);
 
     let subtotal = 0;
-    const lineItems = [];
+    const lineItems: {
+      productId: typeof store._id;
+      name: string;
+      qty: number;
+      unitPrice: number;
+      modifiers: string[];
+    }[] = [];
     for (const item of dto.items) {
-      const product = await this.catalogService.getProductDocById(item.productId);
+      const product = await this.catalogService.getProductDocById(
+        item.productId,
+      );
       if (product.storeId.toString() !== store._id.toString()) {
-        throw new BadRequestException('All items must belong to the same store');
+        throw new BadRequestException(
+          'All items must belong to the same store',
+        );
       }
-      const { unitPrice, resolvedOptions } = resolveLinePrice(product, item.selectedOptions);
+      const { unitPrice, resolvedOptions } = resolveLinePrice(
+        product,
+        item.selectedOptions,
+      );
       subtotal += unitPrice * item.quantity;
       lineItems.push({
         productId: product._id,
@@ -128,7 +144,9 @@ export class OrdersService {
     const total = subtotal + deliveryFee + serviceFee;
 
     const deliveryAddress =
-      dto.deliveryMode === 'door' ? dto.address ?? '' : `Landmark: ${dto.landmarkId}`;
+      dto.deliveryMode === 'door'
+        ? (dto.address ?? '')
+        : `Landmark: ${dto.landmarkId}`;
 
     const order = await this.orderModel.create({
       orderCode: await this.generateOrderCode(),
@@ -178,7 +196,12 @@ export class OrdersService {
         .limit(pageSize),
       this.orderModel.countDocuments(filter),
     ]);
-    return paginate(items.map((o) => this.serializeSummary(o)), totalItems, page, pageSize);
+    return paginate(
+      items.map((o) => this.serializeSummary(o)),
+      totalItems,
+      page,
+      pageSize,
+    );
   }
 
   async findOrderByCode(orderCode: string, userId?: string) {

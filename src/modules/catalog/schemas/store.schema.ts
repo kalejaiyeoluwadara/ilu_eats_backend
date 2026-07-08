@@ -63,4 +63,10 @@ export class Store {
 
 export type StoreDocument = Store & Document;
 export const StoreSchema = SchemaFactory.createForClass(Store);
-StoreSchema.index({ name: 'text', tagline: 'text', description: 'text', location: 'text', tags: 'text' });
+StoreSchema.index({
+  name: 'text',
+  tagline: 'text',
+  description: 'text',
+  location: 'text',
+  tags: 'text',
+});

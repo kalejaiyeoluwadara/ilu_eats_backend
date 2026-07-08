@@ -9,7 +9,10 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import { DeliveryMode, PaymentMethod } from '../../../common/enums/order-status.enum';
+import {
+  DeliveryMode,
+  PaymentMethod,
+} from '../../../common/enums/order-status.enum';
 import { SelectedOptionInputDto } from '../../cart/dto/selected-option.dto';
 
 class OrderItemDto {

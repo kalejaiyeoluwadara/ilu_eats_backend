@@ -12,7 +12,8 @@ export class SelectedOption {
   @Prop({ required: true })
   name: string;
 }
-export const SelectedOptionSchema = SchemaFactory.createForClass(SelectedOption);
+export const SelectedOptionSchema =
+  SchemaFactory.createForClass(SelectedOption);
 
 @Schema({ timestamps: false })
 export class CartItem {
@@ -58,7 +59,7 @@ export class Cart {
   userId: Types.ObjectId;
 
   @Prop({ type: [CartItemSchema], default: [] })
-  items: CartItem[];
+  items: Types.DocumentArray<CartItem>;
 }
 
 export type CartDocument = Cart & Document;

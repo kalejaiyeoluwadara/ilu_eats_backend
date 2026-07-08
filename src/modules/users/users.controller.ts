@@ -77,7 +77,10 @@ export class UsersController {
 
   @Delete('favorites/:productId')
   @HttpCode(204)
-  removeFavorite(@CurrentUser() user: any, @Param('productId') productId: string) {
+  removeFavorite(
+    @CurrentUser() user: any,
+    @Param('productId') productId: string,
+  ) {
     return this.usersService.removeFavorite(user.id, productId);
   }
 }
