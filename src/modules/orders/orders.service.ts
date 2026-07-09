@@ -12,6 +12,7 @@ import { QueryAdminOrdersDto } from './dto/query-admin-orders.dto';
 import { CatalogService } from '../catalog/catalog.service';
 import { CartService } from '../cart/cart.service';
 import { UsersService } from '../users/users.service';
+import { WalletService } from '../wallet/wallet.service';
 import { resolveLinePrice } from '../../common/utils/pricing.util';
 import {
   DeliveryMode,
@@ -25,6 +26,7 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   [PaymentMethod.Card]: 'Card',
   [PaymentMethod.Transfer]: 'Bank Transfer',
   [PaymentMethod.Cash]: 'Cash on Delivery',
+  [PaymentMethod.Wallet]: 'Wallet',
 };
 
 /**
@@ -50,6 +52,7 @@ export class OrdersService {
     private readonly catalogService: CatalogService,
     private readonly cartService: CartService,
     private readonly usersService: UsersService,
+    private readonly walletService: WalletService,
   ) {}
 
   private async generateOrderCode() {
@@ -161,34 +164,59 @@ export class OrdersService {
         ? (dto.address ?? '')
         : `Landmark: ${dto.landmarkId}`;
 
-    const order = await this.orderModel.create({
-      orderCode: await this.generateOrderCode(),
-      userId,
-      storeId: store._id,
-      storeSlug: store.slug,
-      storeName: store.name,
-      storeAddress: store.location,
-      customerName: dto.contactName,
-      customerPhone: dto.contactPhone,
-      deliveryMode: dto.deliveryMode,
-      address: dto.address ?? null,
-      landmarkId: dto.landmarkId ?? null,
-      deliveryAddress,
-      notes: dto.notes ?? null,
-      paymentMethod: dto.paymentMethod,
-      paymentLabel: PAYMENT_LABELS[dto.paymentMethod],
-      paymentStatus:
-        dto.paymentMethod === PaymentMethod.Cash
-          ? PaymentStatus.NotApplicable
-          : PaymentStatus.Pending,
-      lineItems,
-      subtotal,
-      deliveryFee,
-      serviceFee,
-      total,
-      status: OrderStatus.New,
-      placedAt: new Date(),
-    });
+    const orderCode = await this.generateOrderCode();
+
+    // Wallet orders are settled upfront with an atomic, overdraft-safe debit.
+    // If persisting the order fails afterwards, the debit is refunded below.
+    const isWallet = dto.paymentMethod === PaymentMethod.Wallet;
+    let walletPayment: { reference: string } | null = null;
+    if (isWallet) {
+      walletPayment = await this.walletService.debitForOrder(
+        userId,
+        orderCode,
+        total,
+      );
+    }
+
+    let order: OrderDocument;
+    try {
+      order = await this.orderModel.create({
+        orderCode,
+        userId,
+        storeId: store._id,
+        storeSlug: store.slug,
+        storeName: store.name,
+        storeAddress: store.location,
+        customerName: dto.contactName,
+        customerPhone: dto.contactPhone,
+        deliveryMode: dto.deliveryMode,
+        address: dto.address ?? null,
+        landmarkId: dto.landmarkId ?? null,
+        deliveryAddress,
+        notes: dto.notes ?? null,
+        paymentMethod: dto.paymentMethod,
+        paymentLabel: PAYMENT_LABELS[dto.paymentMethod],
+        paymentStatus: isWallet
+          ? PaymentStatus.Paid
+          : dto.paymentMethod === PaymentMethod.Cash
+            ? PaymentStatus.NotApplicable
+            : PaymentStatus.Pending,
+        paymentReference: walletPayment?.reference ?? null,
+        paidAt: isWallet ? new Date() : null,
+        lineItems,
+        subtotal,
+        deliveryFee,
+        serviceFee,
+        total,
+        status: OrderStatus.New,
+        placedAt: new Date(),
+      });
+    } catch (err) {
+      if (walletPayment) {
+        await this.walletService.creditRefund(userId, orderCode, total);
+      }
+      throw err;
+    }
 
     await this.cartService.clearCart(userId);
 

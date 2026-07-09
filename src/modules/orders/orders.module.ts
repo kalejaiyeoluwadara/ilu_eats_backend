@@ -7,6 +7,7 @@ import { Order, OrderSchema } from './schemas/order.schema';
 import { CatalogModule } from '../catalog/catalog.module';
 import { CartModule } from '../cart/cart.module';
 import { UsersModule } from '../users/users.module';
+import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { UsersModule } from '../users/users.module';
     CatalogModule,
     CartModule,
     UsersModule,
+    WalletModule,
   ],
   controllers: [OrdersController, OrdersAdminController],
   providers: [OrdersService],

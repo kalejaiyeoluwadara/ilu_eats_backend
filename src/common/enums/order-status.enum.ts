@@ -9,6 +9,7 @@ export enum PaymentMethod {
   Card = 'card',
   Transfer = 'transfer',
   Cash = 'cash',
+  Wallet = 'wallet',
 }
 
 export enum PaymentStatus {

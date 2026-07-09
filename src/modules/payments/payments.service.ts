@@ -15,29 +15,11 @@ import {
   PaymentMethod,
   PaymentStatus,
 } from '../../common/enums/order-status.enum';
-
-const PAYSTACK_BASE_URL = 'https://api.paystack.co';
-
-interface PaystackInitializeResponse {
-  status: boolean;
-  message: string;
-  data: {
-    authorization_url: string;
-    access_code: string;
-    reference: string;
-  };
-}
-
-interface PaystackVerifyResponse {
-  status: boolean;
-  message: string;
-  data: {
-    status: 'success' | 'failed' | 'abandoned';
-    reference: string;
-    amount: number;
-    currency: string;
-  };
-}
+import {
+  PaystackService,
+  PaystackVerifyResponse,
+} from '../paystack/paystack.service';
+import { WalletService, WALLET_TOPUP_PREFIX } from '../wallet/wallet.service';
 
 @Injectable()
 export class PaymentsService {
@@ -46,48 +28,9 @@ export class PaymentsService {
   constructor(
     @InjectModel(Order.name) private readonly orderModel: Model<OrderDocument>,
     private readonly config: ConfigService,
+    private readonly paystack: PaystackService,
+    private readonly walletService: WalletService,
   ) {}
-
-  private get secretKey(): string {
-    const key = this.config.get<string>('paystack.secretKey');
-    if (!key) {
-      throw new BadRequestException('Paystack is not configured');
-    }
-    return key;
-  }
-
-  private async paystackFetch<T extends { status: boolean }>(
-    path: string,
-    init?: RequestInit,
-  ): Promise<T> {
-    let res: Response;
-    try {
-      res = await fetch(`${PAYSTACK_BASE_URL}${path}`, {
-        ...init,
-        headers: {
-          Authorization: `Bearer ${this.secretKey}`,
-          'Content-Type': 'application/json',
-          ...init?.headers,
-        },
-      });
-    } catch (err) {
-      this.logger.error(`Paystack request to ${path} failed: ${err}`);
-      throw new BadRequestException(
-        'Could not reach Paystack. Please try again shortly.',
-      );
-    }
-
-    const body = (await res.json()) as T & { message?: string };
-    if (!res.ok || !body?.status) {
-      this.logger.error(
-        `Paystack request to ${path} returned an error: ${body?.message ?? 'unknown error'}`,
-      );
-      throw new BadRequestException(
-        body?.message ?? 'Paystack request failed',
-      );
-    }
-    return body;
-  }
 
   async initializePayment(userId: string, email: string, orderId: string) {
     const order = await this.orderModel.findOne({
@@ -101,6 +44,11 @@ export class PaymentsService {
         'Cash on delivery orders do not require online payment',
       );
     }
+    if (order.paymentMethod === PaymentMethod.Wallet) {
+      throw new BadRequestException(
+        'Wallet orders are settled from your wallet balance',
+      );
+    }
     if (order.paymentStatus === PaymentStatus.Paid) {
       throw new BadRequestException('Order has already been paid for');
     }
@@ -108,19 +56,13 @@ export class PaymentsService {
     const reference = `${order.orderCode}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
     const callbackUrl = this.config.get<string>('paystack.callbackUrl');
 
-    const response = await this.paystackFetch<PaystackInitializeResponse>(
-      '/transaction/initialize',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          email,
-          amount: Math.round(order.total * 100),
-          reference,
-          ...(callbackUrl && { callback_url: callbackUrl }),
-          metadata: { orderId: order.orderCode, userId },
-        }),
-      },
-    );
+    const response = await this.paystack.initializeTransaction({
+      email,
+      amount: Math.round(order.total * 100),
+      reference,
+      callbackUrl: callbackUrl || undefined,
+      metadata: { orderId: order.orderCode, userId },
+    });
 
     order.paymentReference = response.data.reference;
     await order.save();
@@ -129,7 +71,7 @@ export class PaymentsService {
       authorizationUrl: response.data.authorization_url,
       accessCode: response.data.access_code,
       reference: response.data.reference,
-      publicKey: this.config.get<string>('paystack.publicKey'),
+      publicKey: this.paystack.publicKey,
     };
   }
 
@@ -146,9 +88,7 @@ export class PaymentsService {
       return { status: order.paymentStatus, order: order.orderCode };
     }
 
-    const response = await this.paystackFetch<PaystackVerifyResponse>(
-      `/transaction/verify/${encodeURIComponent(reference)}`,
-    );
+    const response = await this.paystack.verifyTransaction(reference);
 
     await this.applyVerificationResult(order, response.data);
 
@@ -176,20 +116,8 @@ export class PaymentsService {
     await order.save();
   }
 
-  verifyWebhookSignature(rawBody: Buffer, signature: string | undefined) {
-    if (!signature) return false;
-    const hash = crypto
-      .createHmac('sha512', this.secretKey)
-      .update(rawBody)
-      .digest('hex');
-    const hashBuf = Buffer.from(hash);
-    const sigBuf = Buffer.from(signature);
-    if (hashBuf.length !== sigBuf.length) return false;
-    return crypto.timingSafeEqual(hashBuf, sigBuf);
-  }
-
   async handleWebhookEvent(rawBody: Buffer, signature: string | undefined) {
-    if (!this.verifyWebhookSignature(rawBody, signature)) {
+    if (!this.paystack.verifyWebhookSignature(rawBody, signature)) {
       throw new UnauthorizedException('Invalid webhook signature');
     }
 
@@ -199,6 +127,12 @@ export class PaymentsService {
     };
 
     if (event.event !== 'charge.success' && event.event !== 'charge.failed') {
+      return;
+    }
+
+    // Wallet top-ups share the Paystack account; route them by reference.
+    if (event.data.reference?.startsWith(WALLET_TOPUP_PREFIX)) {
+      await this.walletService.settleTopup(event.data.reference, event.data);
       return;
     }
 
