@@ -18,7 +18,10 @@ import { CloudinaryService } from '../../cloudinary/cloudinary.service';
 import { paginate } from '../../common/dto/paginated-result.dto';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
 import { OrdersService } from '../orders/orders.service';
+import { UsersService } from '../users/users.service';
+import { CreateRiderDto } from './dto/create-rider.dto';
 import { OrderStatus } from '../../common/enums/order-status.enum';
+import { Role } from '../../common/enums/role.enum';
 
 const TIP_PERCENT = 0.15;
 
@@ -32,6 +35,7 @@ export class RiderService {
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     private readonly cloudinaryService: CloudinaryService,
     private readonly ordersService: OrdersService,
+    private readonly usersService: UsersService,
   ) {}
 
   private async getOrCreateProfile(userId: string) {
@@ -61,6 +65,53 @@ export class RiderService {
           plateNumber: profile.plateNumber,
         };
       });
+  }
+
+  /** Full roster for the admin console: every rider account, online or not. */
+  async listAllRiders() {
+    const riders = await this.usersService.findByRole(Role.Rider);
+    const profiles = await this.profileModel
+      .find({ userId: { $in: riders.map((r) => r._id) } })
+      .lean();
+    const profileByUser = new Map(
+      profiles.map((p) => [p.userId.toString(), p]),
+    );
+    return riders.map((rider) => {
+      const profile = profileByUser.get(rider._id.toString());
+      return {
+        riderId: rider._id.toString(),
+        name: rider.name,
+        email: rider.email,
+        phone: rider.phone,
+        isOnline: profile?.isOnline ?? false,
+        vehicleType: profile?.vehicleType ?? '',
+        plateNumber: profile?.plateNumber ?? '',
+      };
+    });
+  }
+
+  async createRider(dto: CreateRiderDto) {
+    const user = await this.usersService.createOperator(
+      dto.name,
+      dto.email,
+      dto.password,
+      Role.Rider,
+      dto.phone,
+    );
+    await this.profileModel.create({
+      userId: user._id,
+      vehicleType: dto.vehicleType ?? '',
+      plateNumber: dto.plateNumber ?? '',
+    });
+    return {
+      riderId: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      isOnline: false,
+      vehicleType: dto.vehicleType ?? '',
+      plateNumber: dto.plateNumber ?? '',
+    };
   }
 
   async assignRiderToOrder(orderCode: string, riderId: string) {

@@ -11,6 +11,7 @@ import { RiderOffer, RiderOfferSchema } from './schemas/rider-offer.schema';
 import { RiderJob, RiderJobSchema } from './schemas/rider-job.schema';
 import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
 import { OrdersModule } from '../orders/orders.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { OrdersModule } from '../orders/orders.module';
     ]),
     CloudinaryModule,
     OrdersModule,
+    UsersModule,
   ],
   controllers: [RiderController, RiderAdminController],
   providers: [RiderService],

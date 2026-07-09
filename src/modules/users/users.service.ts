@@ -35,6 +35,10 @@ export class UsersService {
     return this.userModel.findOne({ email: email.toLowerCase().trim() });
   }
 
+  findByRole(role: Role) {
+    return this.userModel.find({ role }).sort({ createdAt: -1 });
+  }
+
   async createCustomer(name: string, email: string, password: string) {
     const existing = await this.findByEmail(email);
     if (existing) throw new ConflictException('Email already registered');
@@ -44,6 +48,26 @@ export class UsersService {
       email,
       passwordHash,
       role: Role.Customer,
+    });
+  }
+
+  /** Operator accounts (rider/admin) are provisioned by an admin, never self-signup. */
+  async createOperator(
+    name: string,
+    email: string,
+    password: string,
+    role: Role,
+    phone?: string,
+  ) {
+    const existing = await this.findByEmail(email);
+    if (existing) throw new ConflictException('Email already registered');
+    const passwordHash = await bcrypt.hash(password, 10);
+    return this.userModel.create({
+      name,
+      email,
+      passwordHash,
+      role,
+      phone: phone ?? null,
     });
   }
 
