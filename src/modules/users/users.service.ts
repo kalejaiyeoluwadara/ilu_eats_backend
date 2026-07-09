@@ -71,6 +71,18 @@ export class UsersService {
     });
   }
 
+  /** Admin-driven password reset for operator accounts (rider/admin) — no old-password check. */
+  async setPassword(userId: string, password: string) {
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await this.userModel.findByIdAndUpdate(
+      userId,
+      { passwordHash },
+      { new: true },
+    );
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
   async findOrCreateOAuthUser(name: string, email: string) {
     let user = await this.findByEmail(email);
     let isNew = false;

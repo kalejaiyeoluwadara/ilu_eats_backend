@@ -117,6 +117,18 @@ export class RiderService {
     };
   }
 
+  async setRiderPassword(riderId: string, password: string) {
+    const rider = await this.usersService.findById(riderId);
+    if (!rider || rider.role !== Role.Rider) {
+      throw new NotFoundException('Rider not found');
+    }
+    await this.usersService.setPassword(riderId, password);
+    void this.activityService.log(
+      'platform',
+      `Rider password reset · ${rider.name}`,
+    );
+  }
+
   async assignRiderToOrder(orderCode: string, riderId: string) {
     const order = await this.orderModel.findOne({ orderCode });
     if (!order) throw new NotFoundException('Order not found');

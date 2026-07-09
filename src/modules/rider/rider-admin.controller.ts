@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -10,6 +11,7 @@ import {
 import { RiderService } from './rider.service';
 import { AssignRiderDto } from './dto/assign-rider.dto';
 import { CreateRiderDto } from './dto/create-rider.dto';
+import { SetRiderPasswordDto } from './dto/set-rider-password.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -30,6 +32,15 @@ export class RiderAdminController {
   @Post('riders')
   createRider(@Body() dto: CreateRiderDto) {
     return this.riderService.createRider(dto);
+  }
+
+  @Patch('riders/:riderId/password')
+  async setRiderPassword(
+    @Param('riderId') riderId: string,
+    @Body() dto: SetRiderPasswordDto,
+  ) {
+    await this.riderService.setRiderPassword(riderId, dto.password);
+    return { ok: true };
   }
 
   @Post('orders/:orderId/assign-rider')
