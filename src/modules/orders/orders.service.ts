@@ -15,6 +15,7 @@ import { UsersService } from '../users/users.service';
 import { WalletService } from '../wallet/wallet.service';
 import { MailService } from '../mail/mail.service';
 import { resolveLinePrice } from '../../common/utils/pricing.util';
+import { ActivityService } from '../activity/activity.service';
 import {
   DeliveryMode,
   OrderStatus,
@@ -56,6 +57,7 @@ export class OrdersService {
     private readonly usersService: UsersService,
     private readonly walletService: WalletService,
     private readonly mailService: MailService,
+    private readonly activityService: ActivityService,
   ) {}
 
   private async generateOrderCode() {
@@ -269,6 +271,10 @@ export class OrdersService {
     await this.cartService.clearCart(userId);
 
     void this.sendOrderConfirmationEmail(order);
+    void this.activityService.log(
+      'orders',
+      `New order · ${order.orderCode} · ${order.storeName}`,
+    );
 
     return {
       orderId: order.orderCode,
@@ -378,6 +384,10 @@ export class OrdersService {
 
     if (status === OrderStatus.Delivered) {
       void this.sendOrderDeliveredEmail(order);
+      void this.activityService.log(
+        'orders',
+        `Order delivered · ${order.orderCode} · ${order.storeName}`,
+      );
     }
 
     return this.serializeDetail(order);

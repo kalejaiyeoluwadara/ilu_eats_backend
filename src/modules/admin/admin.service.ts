@@ -15,13 +15,9 @@ import {
   FeatureFlag,
   FeatureFlagDocument,
 } from './schemas/feature-flag.schema';
-import {
-  ActivityEvent,
-  ActivityEventDocument,
-} from './schemas/activity-event.schema';
 import { UpdateFeeSettingsDto } from './dto/update-fee-settings.dto';
 import { QueryActivityDto } from './dto/query-activity.dto';
-import { paginate } from '../../common/dto/paginated-result.dto';
+import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class AdminService {
@@ -34,8 +30,7 @@ export class AdminService {
     private feeSettingsModel: Model<FeeSettingsDocument>,
     @InjectModel(FeatureFlag.name)
     private featureFlagModel: Model<FeatureFlagDocument>,
-    @InjectModel(ActivityEvent.name)
-    private activityModel: Model<ActivityEventDocument>,
+    private readonly activityService: ActivityService,
   ) {}
 
   async getDashboardKpis() {
@@ -61,28 +56,8 @@ export class AdminService {
     };
   }
 
-  async getActivity(query: QueryActivityDto) {
-    const page = query.page ?? 1;
-    const pageSize = query.pageSize ?? 10;
-    const filter: Record<string, any> = {};
-    if (query.segment) filter.segment = query.segment;
-    if (query.q) filter.$text = { $search: query.q };
-
-    const [items, totalItems] = await Promise.all([
-      this.activityModel
-        .find(filter)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * pageSize)
-        .limit(pageSize)
-        .lean(),
-      this.activityModel.countDocuments(filter),
-    ]);
-
-    return paginate(items, totalItems, page, pageSize);
-  }
-
-  async logActivity(segment: ActivityEvent['segment'], message: string) {
-    await this.activityModel.create({ segment, message });
+  getActivity(query: QueryActivityDto) {
+    return this.activityService.list(query);
   }
 
   async getFeeSettings() {

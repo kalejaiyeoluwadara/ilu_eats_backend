@@ -22,6 +22,7 @@ import { UsersService } from '../users/users.service';
 import { CreateRiderDto } from './dto/create-rider.dto';
 import { OrderStatus } from '../../common/enums/order-status.enum';
 import { Role } from '../../common/enums/role.enum';
+import { ActivityService } from '../activity/activity.service';
 
 const TIP_PERCENT = 0.15;
 
@@ -36,6 +37,7 @@ export class RiderService {
     private readonly cloudinaryService: CloudinaryService,
     private readonly ordersService: OrdersService,
     private readonly usersService: UsersService,
+    private readonly activityService: ActivityService,
   ) {}
 
   private async getOrCreateProfile(userId: string) {
