@@ -161,6 +161,22 @@ export class OrdersService {
     });
   }
 
+  private async sendRiderAssignedEmail(
+    order: OrderDocument,
+    riderName: string,
+    riderPhone: string | null,
+  ) {
+    const user = await this.usersService.findById(order.userId.toString());
+    if (!user) return;
+    await this.mailService.sendRiderAssignedEmail(user.email, {
+      customerName: order.customerName,
+      orderCode: order.orderCode,
+      storeName: order.storeName,
+      riderName,
+      riderPhone,
+    });
+  }
+
   async createOrder(userId: string, dto: CreateOrderDto) {
     if (dto.items.length === 0) {
       throw new BadRequestException('Order must contain at least one item');
@@ -397,6 +413,16 @@ export class OrdersService {
     const order = await this.orderModel.findById(orderId);
     if (!order) return;
     void this.sendOrderDeliveredEmail(order);
+  }
+
+  async notifyRiderAssigned(
+    orderId: string,
+    riderName: string,
+    riderPhone: string | null,
+  ) {
+    const order = await this.orderModel.findById(orderId);
+    if (!order) return;
+    void this.sendRiderAssignedEmail(order, riderName, riderPhone);
   }
 
   async exportCsv(query: QueryAdminOrdersDto) {

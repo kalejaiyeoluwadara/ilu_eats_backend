@@ -8,6 +8,7 @@ import {
   renderOrderConfirmationEmail,
 } from './templates/order-confirmation.template';
 import { renderOrderDeliveredEmail } from './templates/order-delivered.template';
+import { renderRiderAssignedEmail } from './templates/rider-assigned.template';
 
 export interface SendMailInput {
   to: string;
@@ -132,6 +133,25 @@ export class MailService implements OnModuleInit {
   ): Promise<void> {
     const { subject, html, text } = renderOrderDeliveredEmail({
       ...order,
+      siteUrl: this.siteUrl,
+      supportEmail: this.supportEmail,
+    });
+    await this.send({ to, subject, html, text });
+  }
+
+  async sendRiderAssignedEmail(
+    to: string,
+    order: {
+      customerName: string;
+      orderCode: string;
+      storeName: string;
+      riderName: string;
+      riderPhone: string | null;
+    },
+  ): Promise<void> {
+    const { subject, html, text } = renderRiderAssignedEmail({
+      ...order,
+      trackingUrl: `${this.siteUrl}/orders/${order.orderCode}`,
       siteUrl: this.siteUrl,
       supportEmail: this.supportEmail,
     });

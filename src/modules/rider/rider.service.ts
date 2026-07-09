@@ -173,6 +173,13 @@ export class RiderService {
       'orders',
       `Rider assigned · ${order.orderCode} · ${rider?.name ?? 'Rider'}`,
     );
+    if (rider) {
+      void this.ordersService.notifyRiderAssigned(
+        order._id.toString(),
+        rider.name,
+        rider.phone,
+      );
+    }
 
     return this.ordersService.findOrderByCode(orderCode);
   }
