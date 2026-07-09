@@ -105,6 +105,7 @@ export class RiderService {
       vehicleType: dto.vehicleType ?? '',
       plateNumber: dto.plateNumber ?? '',
     });
+    void this.activityService.log('platform', `Rider account created · ${user.name}`);
     return {
       riderId: user._id.toString(),
       name: user.name,
@@ -125,9 +126,11 @@ export class RiderService {
       );
     }
 
-    const profile = await this.profileModel.findOne({ userId: riderId });
-    if (!profile || !profile.isOnline) {
-      throw new ConflictException('Rider is not available');
+    // Online status isn't enforced yet — admins can assign any rider account
+    // manually while there's no rider self-accept flow to rely on.
+    const riderUser = await this.usersService.findById(riderId);
+    if (!riderUser || riderUser.role !== Role.Rider) {
+      throw new NotFoundException('Rider not found');
     }
 
     const offer = await this.offerModel.create({
@@ -164,6 +167,12 @@ export class RiderService {
     order.assignedAt = new Date();
     order.status = OrderStatus.Assigned;
     await order.save();
+
+    const rider = await this.usersService.findById(riderId);
+    void this.activityService.log(
+      'orders',
+      `Rider assigned · ${order.orderCode} · ${rider?.name ?? 'Rider'}`,
+    );
 
     return this.ordersService.findOrderByCode(orderCode);
   }
