@@ -1,6 +1,7 @@
 export enum OrderStatus {
   New = 'new',
   Preparing = 'preparing',
+  Assigned = 'assigned',
   Out = 'out',
   Delivered = 'delivered',
 }

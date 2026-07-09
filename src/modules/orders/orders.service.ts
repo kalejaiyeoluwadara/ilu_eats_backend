@@ -41,7 +41,8 @@ function computeServiceFee(subtotal: number): number {
 
 const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   [OrderStatus.New]: [OrderStatus.Preparing],
-  [OrderStatus.Preparing]: [OrderStatus.Out],
+  [OrderStatus.Preparing]: [OrderStatus.Assigned],
+  [OrderStatus.Assigned]: [OrderStatus.Out],
   [OrderStatus.Out]: [OrderStatus.Delivered],
   [OrderStatus.Delivered]: [],
 };
@@ -84,7 +85,17 @@ export class OrdersService {
     };
   }
 
-  private serializeDetail(order: OrderDocument) {
+  private async serializeDetail(order: OrderDocument) {
+    let rider: { name: string; phone: string | null } | null = null;
+    if (order.riderId) {
+      const riderUser = await this.usersService.findById(
+        order.riderId.toString(),
+      );
+      if (riderUser) {
+        rider = { name: riderUser.name, phone: riderUser.phone };
+      }
+    }
+
     return {
       id: order.orderCode,
       status: order.status,
@@ -110,6 +121,10 @@ export class OrdersService {
       total: order.total,
       placedAt: order.placedAt,
       estimatedDeliveryWindow: order.estimatedDeliveryWindow,
+      assignedAt: order.assignedAt,
+      outForDeliveryAt: order.outForDeliveryAt,
+      deliveredAt: order.deliveredAt,
+      rider,
     };
   }
 
@@ -353,6 +368,12 @@ export class OrdersService {
     }
 
     order.status = status;
+    if (status === OrderStatus.Out) {
+      order.outForDeliveryAt = new Date();
+    }
+    if (status === OrderStatus.Delivered) {
+      order.deliveredAt = new Date();
+    }
     await order.save();
 
     if (status === OrderStatus.Delivered) {
@@ -360,6 +381,12 @@ export class OrdersService {
     }
 
     return this.serializeDetail(order);
+  }
+
+  async markDeliveredSideEffects(orderId: string) {
+    const order = await this.orderModel.findById(orderId);
+    if (!order) return;
+    void this.sendOrderDeliveredEmail(order);
   }
 
   async exportCsv(query: QueryAdminOrdersDto) {

@@ -111,6 +111,21 @@ export class Order {
 
   @Prop({ required: true })
   placedAt: Date;
+
+  @Prop({ default: null, type: Types.ObjectId, ref: 'User' })
+  riderId: Types.ObjectId | null;
+
+  @Prop({ default: null, type: Types.ObjectId, ref: 'RiderJob' })
+  riderJobId: Types.ObjectId | null;
+
+  @Prop({ default: null, type: Date })
+  assignedAt: Date | null;
+
+  @Prop({ default: null, type: Date })
+  outForDeliveryAt: Date | null;
+
+  @Prop({ default: null, type: Date })
+  deliveredAt: Date | null;
 }
 
 export type OrderDocument = Order & Document;

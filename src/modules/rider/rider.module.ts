@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RiderService } from './rider.service';
 import { RiderController } from './rider.controller';
+import { RiderAdminController } from './rider-admin.controller';
 import {
   RiderProfile,
   RiderProfileSchema,
@@ -9,6 +10,7 @@ import {
 import { RiderOffer, RiderOfferSchema } from './schemas/rider-offer.schema';
 import { RiderJob, RiderJobSchema } from './schemas/rider-job.schema';
 import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
+import { OrdersModule } from '../orders/orders.module';
 
 @Module({
   imports: [
@@ -18,8 +20,9 @@ import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
       { name: RiderJob.name, schema: RiderJobSchema },
     ]),
     CloudinaryModule,
+    OrdersModule,
   ],
-  controllers: [RiderController],
+  controllers: [RiderController, RiderAdminController],
   providers: [RiderService],
   exports: [MongooseModule],
 })

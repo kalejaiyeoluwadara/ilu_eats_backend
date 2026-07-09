@@ -21,6 +21,6 @@ import { MailModule } from '../mail/mail.module';
   ],
   controllers: [OrdersController, OrdersAdminController],
   providers: [OrdersService],
-  exports: [MongooseModule],
+  exports: [MongooseModule, OrdersService],
 })
 export class OrdersModule {}

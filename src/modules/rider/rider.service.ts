@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Parser as CsvParser } from 'json2csv';
 import {
   RiderProfile,
@@ -16,6 +16,9 @@ import { UpdateRiderProfileDto } from './dto/update-rider-profile.dto';
 import { DocumentType } from './schemas/rider-profile.schema';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
 import { paginate } from '../../common/dto/paginated-result.dto';
+import { Order, OrderDocument } from '../orders/schemas/order.schema';
+import { OrdersService } from '../orders/orders.service';
+import { OrderStatus } from '../../common/enums/order-status.enum';
 
 const TIP_PERCENT = 0.15;
 
@@ -26,13 +29,90 @@ export class RiderService {
     private profileModel: Model<RiderProfileDocument>,
     @InjectModel(RiderOffer.name) private offerModel: Model<RiderOfferDocument>,
     @InjectModel(RiderJob.name) private jobModel: Model<RiderJobDocument>,
+    @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly ordersService: OrdersService,
   ) {}
 
   private async getOrCreateProfile(userId: string) {
     let profile = await this.profileModel.findOne({ userId });
     if (!profile) profile = await this.profileModel.create({ userId });
     return profile;
+  }
+
+  async listAvailableRiders() {
+    const profiles = await this.profileModel
+      .find({ isOnline: true })
+      .populate('userId', 'name phone')
+      .lean();
+    return profiles
+      .filter((profile) => profile.userId)
+      .map((profile) => {
+        const user = profile.userId as unknown as {
+          _id: { toString(): string };
+          name: string;
+          phone: string | null;
+        };
+        return {
+          riderId: user._id.toString(),
+          name: user.name,
+          phone: user.phone,
+          vehicleType: profile.vehicleType,
+          plateNumber: profile.plateNumber,
+        };
+      });
+  }
+
+  async assignRiderToOrder(orderCode: string, riderId: string) {
+    const order = await this.orderModel.findOne({ orderCode });
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.status !== OrderStatus.Preparing) {
+      throw new ConflictException(
+        `Cannot assign a rider to an order in status ${order.status}`,
+      );
+    }
+
+    const profile = await this.profileModel.findOne({ userId: riderId });
+    if (!profile || !profile.isOnline) {
+      throw new ConflictException('Rider is not available');
+    }
+
+    const offer = await this.offerModel.create({
+      orderId: order._id,
+      store: order.storeName,
+      customer: order.customerName,
+      drop: order.deliveryAddress,
+      pay: order.deliveryFee,
+      etaMin: order.estimatedDeliveryWindow[1] ?? 45,
+      phone: order.customerPhone,
+      zone: '',
+      lineItems: order.lineItems.map((item) => ({
+        name: item.name,
+        qty: item.qty,
+        modifiers: item.modifiers,
+      })),
+      status: 'accepted',
+    });
+
+    const job = await this.jobModel.create({
+      riderId,
+      offerId: offer._id,
+      store: offer.store,
+      customer: offer.customer,
+      address: offer.drop,
+      payout: offer.pay,
+      status: 'pickup',
+      phone: offer.phone,
+      lineItems: offer.lineItems,
+    });
+
+    order.riderId = new Types.ObjectId(riderId);
+    order.riderJobId = job._id;
+    order.assignedAt = new Date();
+    order.status = OrderStatus.Assigned;
+    await order.save();
+
+    return this.ordersService.findOrderByCode(orderCode);
   }
 
   async getOffers(userId: string) {
@@ -139,6 +219,12 @@ export class RiderService {
     }
     job.status = 'en_route';
     await job.save();
+
+    await this.orderModel.updateOne(
+      { riderJobId: job._id, status: OrderStatus.Assigned },
+      { status: OrderStatus.Out, outForDeliveryAt: new Date() },
+    );
+
     return this.serializeJob(job);
   }
 
@@ -151,6 +237,15 @@ export class RiderService {
     job.tip = Math.round(job.payout * TIP_PERCENT);
     job.deliveredAt = new Date();
     await job.save();
+
+    const order = await this.orderModel.findOneAndUpdate(
+      { riderJobId: job._id, status: OrderStatus.Out },
+      { status: OrderStatus.Delivered, deliveredAt: new Date() },
+    );
+    if (order) {
+      void this.ordersService.markDeliveredSideEffects(order._id.toString());
+    }
+
     return { job: this.serializeJob(job), tip: job.tip };
   }
 
