@@ -13,6 +13,7 @@ import { CatalogService } from '../catalog/catalog.service';
 import { CartService } from '../cart/cart.service';
 import { UsersService } from '../users/users.service';
 import { WalletService } from '../wallet/wallet.service';
+import { MailService } from '../mail/mail.service';
 import { resolveLinePrice } from '../../common/utils/pricing.util';
 import {
   DeliveryMode,
@@ -53,6 +54,7 @@ export class OrdersService {
     private readonly cartService: CartService,
     private readonly usersService: UsersService,
     private readonly walletService: WalletService,
+    private readonly mailService: MailService,
   ) {}
 
   private async generateOrderCode() {
@@ -109,6 +111,37 @@ export class OrdersService {
       placedAt: order.placedAt,
       estimatedDeliveryWindow: order.estimatedDeliveryWindow,
     };
+  }
+
+  private async sendOrderConfirmationEmail(order: OrderDocument) {
+    const user = await this.usersService.findById(order.userId.toString());
+    if (!user) return;
+    await this.mailService.sendOrderConfirmationEmail(user.email, {
+      customerName: order.customerName,
+      orderCode: order.orderCode,
+      storeName: order.storeName,
+      lineItems: order.lineItems.map((item) => ({
+        name: item.name,
+        qty: item.qty,
+        unitPrice: item.unitPrice,
+      })),
+      subtotal: order.subtotal,
+      deliveryFee: order.deliveryFee,
+      serviceFee: order.serviceFee,
+      total: order.total,
+      estimatedDeliveryWindow: order.estimatedDeliveryWindow,
+    });
+  }
+
+  private async sendOrderDeliveredEmail(order: OrderDocument) {
+    const user = await this.usersService.findById(order.userId.toString());
+    if (!user) return;
+    await this.mailService.sendOrderDeliveredEmail(user.email, {
+      customerName: order.customerName,
+      orderCode: order.orderCode,
+      storeName: order.storeName,
+      total: order.total,
+    });
   }
 
   async createOrder(userId: string, dto: CreateOrderDto) {
@@ -220,6 +253,8 @@ export class OrdersService {
 
     await this.cartService.clearCart(userId);
 
+    void this.sendOrderConfirmationEmail(order);
+
     return {
       orderId: order.orderCode,
       status: order.status,
@@ -319,6 +354,11 @@ export class OrdersService {
 
     order.status = status;
     await order.save();
+
+    if (status === OrderStatus.Delivered) {
+      void this.sendOrderDeliveredEmail(order);
+    }
+
     return this.serializeDetail(order);
   }
 

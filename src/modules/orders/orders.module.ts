@@ -8,6 +8,7 @@ import { CatalogModule } from '../catalog/catalog.module';
 import { CartModule } from '../cart/cart.module';
 import { UsersModule } from '../users/users.module';
 import { WalletModule } from '../wallet/wallet.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { WalletModule } from '../wallet/wallet.module';
     CartModule,
     UsersModule,
     WalletModule,
+    MailModule,
   ],
   controllers: [OrdersController, OrdersAdminController],
   providers: [OrdersService],

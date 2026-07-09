@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
+import { MailService } from '../mail/mail.service';
 import { SignupDto } from './dto/signup.dto';
 import { SigninDto } from './dto/signin.dto';
 import { UserDocument } from '../users/schemas/user.schema';
@@ -14,6 +15,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   private buildToken(user: UserDocument) {
@@ -30,6 +32,7 @@ export class AuthService {
       dto.email,
       dto.password,
     );
+    void this.mailService.sendWelcomeEmail(user.email, user.name);
     return {
       user: this.usersService.toPublicUser(user),
       token: this.buildToken(user),
@@ -37,7 +40,13 @@ export class AuthService {
   }
 
   async googleSync(name: string, email: string) {
-    const user = await this.usersService.findOrCreateOAuthUser(name, email);
+    const { user, isNew } = await this.usersService.findOrCreateOAuthUser(
+      name,
+      email,
+    );
+    if (isNew) {
+      void this.mailService.sendWelcomeEmail(user.email, user.name);
+    }
     return {
       user: this.usersService.toPublicUser(user),
       token: this.buildToken(user),

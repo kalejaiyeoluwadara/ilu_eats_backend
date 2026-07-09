@@ -18,4 +18,15 @@ export default () => ({
     callbackUrl: process.env.PAYSTACK_CALLBACK_URL ?? '',
     walletCallbackUrl: process.env.PAYSTACK_WALLET_CALLBACK_URL ?? '',
   },
+  mail: {
+    host: process.env.SMTP_HOST ?? 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT ?? '465', 10),
+    user: process.env.SMTP_USER ?? '',
+    pass: process.env.SMTP_PASS ?? '',
+    fromName: process.env.MAIL_FROM_NAME ?? 'ìlúEats',
+    fromEmail: process.env.MAIL_FROM_EMAIL ?? '',
+    replyTo: process.env.MAIL_REPLY_TO ?? '',
+    supportEmail: process.env.MAIL_SUPPORT_EMAIL ?? '',
+    siteUrl: process.env.MAIL_SITE_URL ?? 'https://ilueats.com',
+  },
 });

@@ -49,6 +49,7 @@ export class UsersService {
 
   async findOrCreateOAuthUser(name: string, email: string) {
     let user = await this.findByEmail(email);
+    let isNew = false;
     if (!user) {
       const passwordHash = await bcrypt.hash(Math.random().toString(36), 10);
       user = await this.userModel.create({
@@ -57,8 +58,9 @@ export class UsersService {
         passwordHash,
         role: Role.Customer,
       });
+      isNew = true;
     }
-    return user;
+    return { user, isNew };
   }
 
   async validateCredentials(email: string, password: string) {
