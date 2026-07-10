@@ -28,5 +28,7 @@ export default () => ({
     replyTo: process.env.MAIL_REPLY_TO ?? '',
     supportEmail: process.env.MAIL_SUPPORT_EMAIL ?? '',
     siteUrl: process.env.MAIL_SITE_URL ?? 'https://ilueats.com',
+    adminEmail: 'kalejaiyeoluwadara1@gmail.com',
+    adminUrl: process.env.MAIL_ADMIN_URL ?? 'https://ilueats.com/admin',
   },
 });

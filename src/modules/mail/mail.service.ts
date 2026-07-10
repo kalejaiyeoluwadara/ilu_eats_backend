@@ -11,6 +11,10 @@ import { renderOrderDeliveredEmail } from './templates/order-delivered.template'
 import { renderRiderAssignedEmail } from './templates/rider-assigned.template';
 import { renderPasswordResetEmail } from './templates/password-reset.template';
 import { renderPasswordChangedEmail } from './templates/password-changed.template';
+import {
+  AdminNewOrderEmailInput,
+  renderAdminNewOrderEmail,
+} from './templates/admin-new-order.template';
 
 export interface SendMailInput {
   to: string;
@@ -99,6 +103,10 @@ export class MailService implements OnModuleInit {
     return this.config.get<string>('mail.supportEmail') ?? this.replyTo;
   }
 
+  private get adminUrl(): string {
+    return this.config.get<string>('mail.adminUrl') ?? `${this.siteUrl}/admin`;
+  }
+
   async sendWelcomeEmail(to: string, name: string): Promise<void> {
     const { subject, html, text } = renderWelcomeEmail({
       name,
@@ -179,6 +187,33 @@ export class MailService implements OnModuleInit {
     const { subject, html, text } = renderRiderAssignedEmail({
       ...order,
       trackingUrl: `${this.siteUrl}/orders/${order.orderCode}`,
+      siteUrl: this.siteUrl,
+      supportEmail: this.supportEmail,
+    });
+    await this.send({ to, subject, html, text });
+  }
+
+  /**
+   * Internal ops notification — the recipient comes from config rather than
+   * the caller, since no customer is involved.
+   */
+  async sendAdminNewOrderEmail(
+    order: Omit<
+      AdminNewOrderEmailInput,
+      'adminUrl' | 'siteUrl' | 'supportEmail'
+    >,
+  ): Promise<void> {
+    const to = this.config.get<string>('mail.adminEmail');
+    if (!to) {
+      this.logger.warn(
+        `Skipped admin notification for order ${order.orderCode}: MAIL_ADMIN_EMAIL not set`,
+      );
+      return;
+    }
+
+    const { subject, html, text } = renderAdminNewOrderEmail({
+      ...order,
+      adminUrl: `${this.adminUrl}/orders/${order.orderCode}`,
       siteUrl: this.siteUrl,
       supportEmail: this.supportEmail,
     });
