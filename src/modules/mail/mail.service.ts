@@ -9,6 +9,8 @@ import {
 } from './templates/order-confirmation.template';
 import { renderOrderDeliveredEmail } from './templates/order-delivered.template';
 import { renderRiderAssignedEmail } from './templates/rider-assigned.template';
+import { renderPasswordResetEmail } from './templates/password-reset.template';
+import { renderPasswordChangedEmail } from './templates/password-changed.template';
 
 export interface SendMailInput {
   to: string;
@@ -99,6 +101,31 @@ export class MailService implements OnModuleInit {
 
   async sendWelcomeEmail(to: string, name: string): Promise<void> {
     const { subject, html, text } = renderWelcomeEmail({
+      name,
+      siteUrl: this.siteUrl,
+      supportEmail: this.supportEmail,
+    });
+    await this.send({ to, subject, html, text });
+  }
+
+  async sendPasswordResetEmail(
+    to: string,
+    name: string,
+    resetToken: string,
+    expiresInLabel: string,
+  ): Promise<void> {
+    const { subject, html, text } = renderPasswordResetEmail({
+      name,
+      resetUrl: `${this.siteUrl}/reset-password?token=${resetToken}`,
+      expiresInLabel,
+      siteUrl: this.siteUrl,
+      supportEmail: this.supportEmail,
+    });
+    await this.send({ to, subject, html, text });
+  }
+
+  async sendPasswordChangedEmail(to: string, name: string): Promise<void> {
+    const { subject, html, text } = renderPasswordChangedEmail({
       name,
       siteUrl: this.siteUrl,
       supportEmail: this.supportEmail,

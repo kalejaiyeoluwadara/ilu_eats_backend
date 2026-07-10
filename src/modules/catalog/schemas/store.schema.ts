@@ -59,6 +59,11 @@ export class Store {
 
   @Prop({ default: 0 })
   orders7d: number;
+
+  // Hidden house store that owns standalone items not tied to a vendor;
+  // excluded from public store listings but resolvable by slug.
+  @Prop({ default: false })
+  isPlatform: boolean;
 }
 
 export type StoreDocument = Store & Document;

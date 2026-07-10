@@ -56,6 +56,56 @@ export class AdminService {
     };
   }
 
+  /** Real per-store order counts/volume, computed from the orders collection. */
+  async getStoreStats() {
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const [week, allTime] = await Promise.all([
+      this.orderModel.aggregate<{
+        _id: any;
+        orders7d: number;
+        revenue7d: number;
+      }>([
+        { $match: { createdAt: { $gte: since } } },
+        {
+          $group: {
+            _id: '$storeId',
+            orders7d: { $sum: 1 },
+            revenue7d: { $sum: '$total' },
+          },
+        },
+      ]),
+      this.orderModel.aggregate<{ _id: any; ordersTotal: number }>([
+        { $group: { _id: '$storeId', ordersTotal: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const byStore = new Map<
+      string,
+      { storeId: string; orders7d: number; revenue7d: number; ordersTotal: number }
+    >();
+    for (const row of allTime) {
+      byStore.set(String(row._id), {
+        storeId: String(row._id),
+        orders7d: 0,
+        revenue7d: 0,
+        ordersTotal: row.ordersTotal,
+      });
+    }
+    for (const row of week) {
+      const entry = byStore.get(String(row._id)) ?? {
+        storeId: String(row._id),
+        orders7d: 0,
+        revenue7d: 0,
+        ordersTotal: 0,
+      };
+      entry.orders7d = row.orders7d;
+      entry.revenue7d = row.revenue7d;
+      byStore.set(String(row._id), entry);
+    }
+
+    return { items: [...byStore.values()] };
+  }
+
   getActivity(query: QueryActivityDto) {
     return this.activityService.list(query);
   }

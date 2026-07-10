@@ -5,6 +5,7 @@ import { CatalogController } from './catalog.controller';
 import { CatalogAdminController } from './catalog-admin.controller';
 import { Store, StoreSchema } from './schemas/store.schema';
 import { Product, ProductSchema } from './schemas/product.schema';
+import { ActivityModule } from '../activity/activity.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { Product, ProductSchema } from './schemas/product.schema';
       { name: Store.name, schema: StoreSchema },
       { name: Product.name, schema: ProductSchema },
     ]),
+    ActivityModule,
   ],
   controllers: [CatalogController, CatalogAdminController],
   providers: [CatalogService],

@@ -27,6 +27,11 @@ export class AdminController {
     return this.adminService.getDashboardKpis();
   }
 
+  @Get('stores/stats')
+  getStoreStats() {
+    return this.adminService.getStoreStats();
+  }
+
   @Get('activity')
   getActivity(@Query() query: QueryActivityDto) {
     return this.adminService.getActivity(query);

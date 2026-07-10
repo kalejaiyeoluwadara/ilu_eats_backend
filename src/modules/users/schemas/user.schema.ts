@@ -27,6 +27,13 @@ export class User {
 
   @Prop({ type: [String], default: [] })
   favoriteProductIds: string[];
+
+  /** SHA-256 hash of the active password-reset token (raw token is emailed, never stored). */
+  @Prop({ default: null, type: String })
+  passwordResetTokenHash: string | null;
+
+  @Prop({ default: null, type: Date })
+  passwordResetExpires: Date | null;
 }
 
 export type UserDocument = User & Document;

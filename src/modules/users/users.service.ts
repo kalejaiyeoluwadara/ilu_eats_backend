@@ -106,6 +106,45 @@ export class UsersService {
     return matches ? user : null;
   }
 
+  verifyPassword(user: UserDocument, password: string) {
+    return bcrypt.compare(password, user.passwordHash);
+  }
+
+  async setPasswordResetToken(
+    userId: string,
+    tokenHash: string,
+    expires: Date,
+  ) {
+    await this.userModel.updateOne(
+      { _id: userId },
+      { passwordResetTokenHash: tokenHash, passwordResetExpires: expires },
+    );
+  }
+
+  /** Returns the user only if the hashed token matches and hasn't expired. */
+  findByValidPasswordResetToken(tokenHash: string) {
+    return this.userModel.findOne({
+      passwordResetTokenHash: tokenHash,
+      passwordResetExpires: { $gt: new Date() },
+    });
+  }
+
+  /** Sets a new password and clears the reset token so it can't be reused. */
+  async resetPassword(userId: string, password: string) {
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await this.userModel.findByIdAndUpdate(
+      userId,
+      {
+        passwordHash,
+        passwordResetTokenHash: null,
+        passwordResetExpires: null,
+      },
+      { new: true },
+    );
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
   async updateMe(userId: string, dto: UpdateUserDto) {
     const user = await this.userModel.findByIdAndUpdate(userId, dto, {
       new: true,

@@ -1,9 +1,6 @@
 import { renderButton, renderEmailLayout } from './base-layout';
 import { escapeHtml } from './format.util';
 
-const WELCOME_BANNER_URL =
-  'https://res.cloudinary.com/diccn7l1x/image/upload/v1783584702/banner_aqap7o.png';
-
 export interface WelcomeEmailInput {
   name: string;
   siteUrl: string;
@@ -37,7 +34,6 @@ export function renderWelcomeEmail(input: WelcomeEmailInput): {
   const html = renderEmailLayout({
     previewText: `Welcome to ìlúEats, ${firstName} — your account is ready.`,
     bodyHtml,
-    heroImageUrl: WELCOME_BANNER_URL,
     heroImageAlt: 'Welcome to ìlúEats',
     supportEmail: input.supportEmail,
     siteUrl: input.siteUrl,

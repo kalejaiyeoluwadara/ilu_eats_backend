@@ -12,18 +12,24 @@ import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { QueryAdminProductsDto } from './dto/query-admin-products.dto';
 import { CategoryId } from '../../common/enums/category.enum';
 import { generateUniqueSlug } from '../../common/utils/slug.util';
+import { paginate } from '../../common/dto/paginated-result.dto';
+import { ActivityService } from '../activity/activity.service';
+
+const PLATFORM_STORE_SLUG = 'ilueats-kitchen';
 
 @Injectable()
 export class CatalogService {
   constructor(
     @InjectModel(Store.name) private storeModel: Model<StoreDocument>,
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
+    private readonly activityService: ActivityService,
   ) {}
 
   async findStores(query: QueryStoresDto) {
-    const filter: Record<string, any> = {};
+    const filter: Record<string, any> = { isPlatform: { $ne: true } };
     if (query.category && query.category !== ('all' as any)) {
       filter.categories = query.category;
     }
@@ -103,7 +109,125 @@ export class CatalogService {
       slug,
       categories: dto.categories?.length ? dto.categories : [CategoryId.Snacks],
     });
+    void this.activityService.log('stores', `Store created · ${store.name}`);
     return store.toObject();
+  }
+
+  async deleteStore(id: string) {
+    if (!Types.ObjectId.isValid(id))
+      throw new BadRequestException('Invalid store id');
+    const store = await this.storeModel.findById(id);
+    if (!store) throw new NotFoundException('Store not found');
+    if (store.isPlatform)
+      throw new BadRequestException('The platform store cannot be deleted');
+    const { deletedCount } = await this.productModel.deleteMany({
+      storeId: store._id,
+    });
+    await store.deleteOne();
+    void this.activityService.log(
+      'stores',
+      `Store deleted · ${store.name} (${deletedCount} item${deletedCount === 1 ? '' : 's'} removed)`,
+    );
+  }
+
+  /**
+   * House store that owns standalone items sold directly by the platform.
+   * Created on demand; hidden from public store listings.
+   */
+  async ensurePlatformStore() {
+    const existing = await this.storeModel.findOne({ isPlatform: true });
+    if (existing) return existing.toObject();
+    const store = await this.storeModel.create({
+      slug: await generateUniqueSlug(this.storeModel, PLATFORM_STORE_SLUG),
+      name: 'ìlúEats Kitchen',
+      tagline: 'Straight from ìlúEats',
+      description:
+        'Standalone items sold directly by ìlúEats, outside any vendor storefront.',
+      categories: [CategoryId.Snacks],
+      isOpen: true,
+      isPlatform: true,
+      location: 'Ilisan-Remo',
+    });
+    return store.toObject();
+  }
+
+  async findAllProductsAdmin(query: QueryAdminProductsDto) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 12;
+    const filter: Record<string, any> = {};
+    if (query.storeId) filter.storeId = new Types.ObjectId(query.storeId);
+    if (query.category && query.category !== ('all' as any)) {
+      filter.category = query.category;
+    }
+    if (query.q) {
+      const rx = new RegExp(
+        query.q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+        'i',
+      );
+      filter.$or = [{ name: rx }, { description: rx }, { storeSlug: rx }];
+    }
+
+    const [items, totalItems] = await Promise.all([
+      this.productModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * pageSize)
+        .limit(pageSize)
+        .lean(),
+      this.productModel.countDocuments(filter),
+    ]);
+
+    const storeIds = [...new Set(items.map((p) => String(p.storeId)))];
+    const stores = await this.storeModel
+      .find({ _id: { $in: storeIds } })
+      .select('name isPlatform')
+      .lean();
+    const storeById = new Map(stores.map((s) => [String(s._id), s]));
+
+    return paginate(
+      items.map((p) => ({
+        ...p,
+        storeName: storeById.get(String(p.storeId))?.name ?? p.storeSlug,
+        storeIsPlatform: !!storeById.get(String(p.storeId))?.isPlatform,
+      })),
+      totalItems,
+      page,
+      pageSize,
+    );
+  }
+
+  async duplicateProduct(id: string, targetStoreId?: string) {
+    const source = await this.getProductDocById(id);
+    const store = await this.findStoreOrThrow(
+      targetStoreId ?? String(source.storeId),
+    );
+
+    const src = source.toObject();
+    const slug = await generateUniqueSlug(this.productModel, src.slug, {
+      storeId: store._id,
+    });
+
+    const copy = await this.productModel.create({
+      name: src.name,
+      description: src.description,
+      price: src.price,
+      oldPrice: src.oldPrice,
+      image: src.image,
+      category: src.category,
+      isPopular: src.isPopular,
+      isNew: src.isNew,
+      rating: src.rating,
+      reviews: src.reviews,
+      options: src.options,
+      slug,
+      storeId: store._id,
+      storeSlug: store.slug,
+    });
+    void this.activityService.log(
+      'stores',
+      `Item duplicated · ${copy.name} → ${store.name}`,
+    );
+    return copy.toObject();
   }
 
   async updateStore(id: string, dto: UpdateStoreDto) {

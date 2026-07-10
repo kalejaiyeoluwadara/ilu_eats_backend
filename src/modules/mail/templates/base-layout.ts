@@ -4,6 +4,13 @@ const CREAM = '#fcfaf7';
 const INK = '#231512';
 const MUTED = '#6f625c';
 
+/**
+ * Shared banner shown at the top of every customer-facing email. Used as the
+ * default hero so all user emails carry the same branding as the welcome email.
+ */
+export const USER_EMAIL_BANNER_URL =
+  'https://res.cloudinary.com/diccn7l1x/image/upload/v1783584702/banner_aqap7o.png';
+
 export interface EmailLayoutOptions {
   /** Short hidden preview text shown next to the subject line in inbox lists. */
   previewText: string;
@@ -22,14 +29,10 @@ export interface EmailLayoutOptions {
  * high (real HTML copy, no image-only content) is deliberate for spam-filter friendliness.
  */
 export function renderEmailLayout(options: EmailLayoutOptions): string {
-  const {
-    previewText,
-    bodyHtml,
-    heroImageUrl,
-    heroImageAlt,
-    supportEmail,
-    siteUrl,
-  } = options;
+  const { previewText, bodyHtml, heroImageAlt, supportEmail, siteUrl } =
+    options;
+  // Default every customer-facing email to the shared branded banner.
+  const heroImageUrl = options.heroImageUrl ?? USER_EMAIL_BANNER_URL;
 
   return `<!doctype html>
 <html lang="en">
