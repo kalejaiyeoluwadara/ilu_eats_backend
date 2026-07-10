@@ -152,6 +152,23 @@ export class OrdersService {
     });
   }
 
+  private async sendAdminNewOrderEmail(order: OrderDocument) {
+    await this.mailService.sendAdminNewOrderEmail({
+      orderCode: order.orderCode,
+      storeName: order.storeName,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      deliveryAddress: order.deliveryAddress,
+      paymentLabel: order.paymentLabel,
+      lineItems: order.lineItems.map((item) => ({
+        name: item.name,
+        qty: item.qty,
+        unitPrice: item.unitPrice,
+      })),
+      total: order.total,
+    });
+  }
+
   private async sendOrderDeliveredEmail(order: OrderDocument) {
     const user = await this.usersService.findById(order.userId.toString());
     if (!user) return;
@@ -294,6 +311,7 @@ export class OrdersService {
     await this.cartService.clearCart(userId);
 
     void this.sendOrderConfirmationEmail(order);
+    void this.sendAdminNewOrderEmail(order);
     void this.activityService.log(
       'orders',
       `New order · ${order.orderCode} · ${order.storeName}`,

@@ -16,8 +16,11 @@ export interface EmailLayoutOptions {
   previewText: string;
   /** Inner content as a raw HTML string (already escaped by the caller). */
   bodyHtml: string;
-  /** Optional full-width hero image shown under the header bar. */
-  heroImageUrl?: string;
+  /**
+   * Full-width hero image shown under the header bar. Omit to get the shared
+   * customer banner; pass `null` for internal/ops emails that shouldn't carry it.
+   */
+  heroImageUrl?: string | null;
   heroImageAlt?: string;
   supportEmail: string;
   siteUrl: string;
@@ -31,8 +34,12 @@ export interface EmailLayoutOptions {
 export function renderEmailLayout(options: EmailLayoutOptions): string {
   const { previewText, bodyHtml, heroImageAlt, supportEmail, siteUrl } =
     options;
-  // Default every customer-facing email to the shared branded banner.
-  const heroImageUrl = options.heroImageUrl ?? USER_EMAIL_BANNER_URL;
+  // Default every customer-facing email to the shared branded banner; an
+  // explicit `null` opts out (internal emails).
+  const heroImageUrl =
+    options.heroImageUrl === undefined
+      ? USER_EMAIL_BANNER_URL
+      : options.heroImageUrl;
 
   return `<!doctype html>
 <html lang="en">
