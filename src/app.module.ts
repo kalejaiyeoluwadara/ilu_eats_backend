@@ -14,6 +14,7 @@ import { RiderModule } from './modules/rider/rider.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { WalletModule } from './modules/wallet/wallet.module';
+import { PlatformModule } from './modules/platform/platform.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
     CatalogModule,
     CartModule,
     OrdersModule,
+    PlatformModule,
     PaymentsModule,
     WalletModule,
     BannersModule,

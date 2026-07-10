@@ -16,6 +16,7 @@ import { WalletService } from '../wallet/wallet.service';
 import { MailService } from '../mail/mail.service';
 import { resolveLinePrice } from '../../common/utils/pricing.util';
 import { ActivityService } from '../activity/activity.service';
+import { PlatformService } from '../platform/platform.service';
 import {
   DeliveryMode,
   OrderStatus,
@@ -58,6 +59,7 @@ export class OrdersService {
     private readonly walletService: WalletService,
     private readonly mailService: MailService,
     private readonly activityService: ActivityService,
+    private readonly platformService: PlatformService,
   ) {}
 
   private async generateOrderCode() {
@@ -180,6 +182,11 @@ export class OrdersService {
   async createOrder(userId: string, dto: CreateOrderDto) {
     if (dto.items.length === 0) {
       throw new BadRequestException('Order must contain at least one item');
+    }
+
+    const platform = await this.platformService.getStatus();
+    if (!platform.isOpen) {
+      throw new BadRequestException(platform.message);
     }
 
     const store = await this.catalogService.getStoreDocById(dto.storeId);

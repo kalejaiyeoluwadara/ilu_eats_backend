@@ -1,0 +1,31 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document, Types } from 'mongoose';
+
+/** Singleton document controlling platform-wide ordering availability. */
+@Schema({ timestamps: true })
+export class PlatformSettings {
+  _id: Types.ObjectId;
+
+  /** Kill switch — closes ordering regardless of the schedule. */
+  @Prop({ default: false })
+  manualClosed: boolean;
+
+  /** When on, ordering is only open between openTime and closeTime. */
+  @Prop({ default: false })
+  autoScheduleEnabled: boolean;
+
+  /** 24h HH:mm, Africa/Lagos. */
+  @Prop({ default: '08:00' })
+  openTime: string;
+
+  /** 24h HH:mm, Africa/Lagos. A close before open spans midnight. */
+  @Prop({ default: '22:00' })
+  closeTime: string;
+
+  @Prop({ default: '' })
+  closedMessage: string;
+}
+
+export type PlatformSettingsDocument = PlatformSettings & Document;
+export const PlatformSettingsSchema =
+  SchemaFactory.createForClass(PlatformSettings);

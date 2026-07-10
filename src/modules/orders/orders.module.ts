@@ -10,6 +10,7 @@ import { UsersModule } from '../users/users.module';
 import { WalletModule } from '../wallet/wallet.module';
 import { MailModule } from '../mail/mail.module';
 import { ActivityModule } from '../activity/activity.module';
+import { PlatformModule } from '../platform/platform.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ActivityModule } from '../activity/activity.module';
     WalletModule,
     MailModule,
     ActivityModule,
+    PlatformModule,
   ],
   controllers: [OrdersController, OrdersAdminController],
   providers: [OrdersService],

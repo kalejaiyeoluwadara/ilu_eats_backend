@@ -8,6 +8,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
+import { PlatformService } from '../platform/platform.service';
+import { UpdatePlatformSettingsDto } from '../platform/dto/update-platform-settings.dto';
 import { QueryActivityDto } from './dto/query-activity.dto';
 import { UpdateFeeSettingsDto } from './dto/update-fee-settings.dto';
 import { UpdateFeatureFlagDto } from './dto/update-feature-flag.dto';
@@ -20,7 +22,20 @@ import { Role } from '../../common/enums/role.enum';
 @Roles(Role.Admin)
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly platformService: PlatformService,
+  ) {}
+
+  @Get('settings/platform')
+  getPlatformSettings() {
+    return this.platformService.getStatus();
+  }
+
+  @Patch('settings/platform')
+  updatePlatformSettings(@Body() dto: UpdatePlatformSettingsDto) {
+    return this.platformService.updateSettings(dto);
+  }
 
   @Get('dashboard/kpis')
   getDashboardKpis() {

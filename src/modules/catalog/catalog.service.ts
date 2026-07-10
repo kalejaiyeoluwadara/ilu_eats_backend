@@ -88,7 +88,7 @@ export class CatalogService {
     if (!q) return result;
     if (type === 'all' || type === 'stores') {
       result.stores = await this.storeModel
-        .find({ $text: { $search: q } })
+        .find({ $text: { $search: q }, isPlatform: { $ne: true } })
         .lean();
     }
     if (type === 'all' || type === 'dishes') {

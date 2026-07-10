@@ -8,6 +8,7 @@ import { OrdersModule } from '../orders/orders.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { RiderModule } from '../rider/rider.module';
 import { ActivityModule } from '../activity/activity.module';
+import { PlatformModule } from '../platform/platform.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ActivityModule } from '../activity/activity.module';
     CatalogModule,
     RiderModule,
     ActivityModule,
+    PlatformModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],
