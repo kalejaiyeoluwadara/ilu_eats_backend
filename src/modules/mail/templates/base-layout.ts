@@ -7,9 +7,14 @@ const MUTED = '#6f625c';
 /**
  * Shared banner shown at the top of every customer-facing email. Used as the
  * default hero so all user emails carry the same branding as the welcome email.
+ *
+ * Served through a Cloudinary transform: the source PNG is 1920px/1.8MB, which
+ * is far more than a 600px-wide email column needs. `f_jpg` rather than `f_auto`
+ * because Outlook cannot render the WebP that `f_auto` negotiates; the source
+ * has no alpha channel, so JPEG is lossless in practice here.
  */
 export const USER_EMAIL_BANNER_URL =
-  'https://res.cloudinary.com/diccn7l1x/image/upload/v1783584702/banner_aqap7o.png';
+  'https://res.cloudinary.com/diccn7l1x/image/upload/f_jpg,q_auto:good,w_1200/v1783584702/banner_aqap7o.png';
 
 export interface EmailLayoutOptions {
   /** Short hidden preview text shown next to the subject line in inbox lists. */
