@@ -17,7 +17,10 @@ import {
 } from './schemas/feature-flag.schema';
 import { UpdateFeeSettingsDto } from './dto/update-fee-settings.dto';
 import { QueryActivityDto } from './dto/query-activity.dto';
+import { QueryUsersDto } from './dto/query-users.dto';
 import { ActivityService } from '../activity/activity.service';
+import { UsersService } from '../users/users.service';
+import { WalletService } from '../wallet/wallet.service';
 
 @Injectable()
 export class AdminService {
@@ -31,7 +34,35 @@ export class AdminService {
     @InjectModel(FeatureFlag.name)
     private featureFlagModel: Model<FeatureFlagDocument>,
     private readonly activityService: ActivityService,
+    private readonly usersService: UsersService,
+    private readonly walletService: WalletService,
   ) {}
+
+  listUsers(query: QueryUsersDto) {
+    return this.usersService.adminListUsers({
+      page: query.page,
+      pageSize: query.pageSize,
+      q: query.q,
+      role: query.role,
+      status: query.status,
+    });
+  }
+
+  getUser(id: string) {
+    return this.usersService.adminGetUser(id);
+  }
+
+  setUserBlocked(id: string, blocked: boolean) {
+    return this.usersService.setBlocked(id, blocked);
+  }
+
+  deleteUser(id: string) {
+    return this.usersService.deleteUser(id);
+  }
+
+  getUserTransactions(id: string, page: number, pageSize: number) {
+    return this.walletService.getTransactions(id, page, pageSize);
+  }
 
   async getDashboardKpis() {
     const startOfDay = new Date();

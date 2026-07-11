@@ -11,6 +11,7 @@ import { WalletModule } from '../wallet/wallet.module';
 import { MailModule } from '../mail/mail.module';
 import { ActivityModule } from '../activity/activity.module';
 import { PlatformModule } from '../platform/platform.module';
+import { ReferralModule } from '../referral/referral.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { PlatformModule } from '../platform/platform.module';
     MailModule,
     ActivityModule,
     PlatformModule,
+    ReferralModule,
   ],
   controllers: [OrdersController, OrdersAdminController],
   providers: [OrdersService],

@@ -75,6 +75,12 @@ export class AuthService {
       );
     }
 
+    if (user.isBlocked) {
+      throw new ForbiddenException(
+        'This account has been suspended. Please contact ìlúEats support.',
+      );
+    }
+
     if (dto.allowedRoles?.length && !dto.allowedRoles.includes(user.role)) {
       throw new ForbiddenException(
         'Account role not permitted for this portal',

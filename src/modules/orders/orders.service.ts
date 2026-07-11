@@ -17,6 +17,7 @@ import { MailService } from '../mail/mail.service';
 import { resolveLinePrice } from '../../common/utils/pricing.util';
 import { ActivityService } from '../activity/activity.service';
 import { PlatformService } from '../platform/platform.service';
+import { ReferralService } from '../referral/referral.service';
 import {
   DeliveryMode,
   OrderStatus,
@@ -60,6 +61,7 @@ export class OrdersService {
     private readonly mailService: MailService,
     private readonly activityService: ActivityService,
     private readonly platformService: PlatformService,
+    private readonly referralService: ReferralService,
   ) {}
 
   private async generateOrderCode() {
@@ -81,6 +83,7 @@ export class OrdersService {
       status: order.status,
       paymentStatus: order.paymentStatus,
       subtotal: order.subtotal,
+      discount: order.discount,
       deliveryFee: order.deliveryFee,
       serviceFee: order.serviceFee,
       total: order.total,
@@ -120,6 +123,8 @@ export class OrdersService {
         modifiers: item.modifiers,
       })),
       subtotal: order.subtotal,
+      referralCode: order.referralCode,
+      discount: order.discount,
       deliveryFee: order.deliveryFee,
       serviceFee: order.serviceFee,
       total: order.total,
@@ -145,6 +150,7 @@ export class OrdersService {
         unitPrice: item.unitPrice,
       })),
       subtotal: order.subtotal,
+      discount: order.discount,
       deliveryFee: order.deliveryFee,
       serviceFee: order.serviceFee,
       total: order.total,
@@ -245,9 +251,29 @@ export class OrdersService {
       );
     }
 
+    // Resolve any referral code before computing fees so the discount reduces
+    // the amount we charge (and the wallet debit below).
+    let referralCode: string | null = null;
+    let referralId: string | null = null;
+    let discount = 0;
+    if (dto.referralCode?.trim()) {
+      const priorUserUses = await this.orderModel.countDocuments({
+        userId,
+        referralCode: dto.referralCode.trim().toUpperCase(),
+      });
+      const resolved = await this.referralService.validateForOrder(
+        dto.referralCode,
+        subtotal,
+        priorUserUses,
+      );
+      referralCode = resolved.code;
+      referralId = resolved.referralId;
+      discount = resolved.discount;
+    }
+
     const deliveryFee = store.deliveryFee;
     const serviceFee = computeServiceFee(subtotal);
-    const total = subtotal + deliveryFee + serviceFee;
+    const total = Math.max(0, subtotal - discount) + deliveryFee + serviceFee;
 
     const deliveryAddress =
       dto.deliveryMode === DeliveryMode.Door
@@ -295,6 +321,8 @@ export class OrdersService {
         paidAt: isWallet ? new Date() : null,
         lineItems,
         subtotal,
+        referralCode,
+        discount,
         deliveryFee,
         serviceFee,
         total,
@@ -306,6 +334,10 @@ export class OrdersService {
         await this.walletService.creditRefund(userId, orderCode, total);
       }
       throw err;
+    }
+
+    if (referralId) {
+      void this.referralService.recordRedemption(referralId);
     }
 
     await this.cartService.clearCart(userId);
@@ -323,6 +355,8 @@ export class OrdersService {
       paymentStatus: order.paymentStatus,
       paymentRequired: order.paymentStatus === PaymentStatus.Pending,
       subtotal: order.subtotal,
+      referralCode: order.referralCode,
+      discount: order.discount,
       deliveryFee: order.deliveryFee,
       serviceFee: order.serviceFee,
       total: order.total,
@@ -382,6 +416,9 @@ export class OrdersService {
         storeAddress: order.storeAddress,
         paymentLabel: order.paymentLabel,
         total: order.total,
+        subtotal: order.subtotal,
+        discount: order.discount,
+        referralCode: order.referralCode,
         deliveryFee: order.deliveryFee,
         serviceFee: order.serviceFee,
         status: order.status,

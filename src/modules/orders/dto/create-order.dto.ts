@@ -69,6 +69,10 @@ export class CreateOrderDto {
   @IsString()
   notes?: string;
 
+  @IsOptional()
+  @IsString()
+  referralCode?: string;
+
   @IsEnum(PaymentMethod)
   paymentMethod: PaymentMethod;
 }

@@ -22,6 +22,13 @@ export class User {
   @Prop({ required: true, enum: Role, default: Role.Customer })
   role: Role;
 
+  /** When true the account is barred: its credentials/token are rejected at auth time. */
+  @Prop({ default: false })
+  isBlocked: boolean;
+
+  @Prop({ default: null, type: Date })
+  blockedAt: Date | null;
+
   @Prop({ type: [AddressSchema], default: [] })
   addresses: Types.DocumentArray<Address>;
 
@@ -34,6 +41,9 @@ export class User {
 
   @Prop({ default: null, type: Date })
   passwordResetExpires: Date | null;
+
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export type UserDocument = User & Document;

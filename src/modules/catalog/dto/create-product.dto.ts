@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -23,10 +23,12 @@ export class CreateProductDto {
   @IsString()
   description?: string;
 
+  @Type(() => Number)
   @IsNumber()
   price: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   oldPrice?: number;
 
@@ -38,18 +40,22 @@ export class CreateProductDto {
   image?: string;
 
   @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   isPopular?: boolean;
 
   @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   isNew?: boolean;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   rating?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   reviews?: number;
 

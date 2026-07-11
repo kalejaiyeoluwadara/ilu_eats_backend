@@ -94,6 +94,12 @@ export class Order {
   @Prop({ required: true })
   subtotal: number;
 
+  @Prop({ default: null, type: String })
+  referralCode: string | null;
+
+  @Prop({ default: 0 })
+  discount: number;
+
   @Prop({ required: true })
   deliveryFee: number;
 

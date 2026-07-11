@@ -17,6 +17,7 @@ import { CategoryId } from '../../common/enums/category.enum';
 import { generateUniqueSlug } from '../../common/utils/slug.util';
 import { paginate } from '../../common/dto/paginated-result.dto';
 import { ActivityService } from '../activity/activity.service';
+import { CloudinaryService } from '../../cloudinary/cloudinary.service';
 
 const PLATFORM_STORE_SLUG = 'ilueats-kitchen';
 
@@ -26,6 +27,7 @@ export class CatalogService {
     @InjectModel(Store.name) private storeModel: Model<StoreDocument>,
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     private readonly activityService: ActivityService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   async findStores(query: QueryStoresDto) {
@@ -253,7 +255,11 @@ export class CatalogService {
     return store.toObject();
   }
 
-  async createProduct(storeId: string, dto: CreateProductDto) {
+  async createProduct(
+    storeId: string,
+    dto: CreateProductDto,
+    file?: Express.Multer.File,
+  ) {
     const store = await this.findStoreOrThrow(storeId);
     const slug = await generateUniqueSlug(
       this.productModel,
@@ -267,8 +273,14 @@ export class CatalogService {
     const oldPrice =
       dto.oldPrice && dto.oldPrice > 0 ? Math.round(dto.oldPrice) : null;
 
+    const image = file
+      ? (await this.cloudinaryService.uploadFile(file, 'menu-items'))
+          .secure_url
+      : dto.image;
+
     const product = await this.productModel.create({
       ...dto,
+      image,
       price,
       oldPrice,
       slug,
@@ -278,7 +290,11 @@ export class CatalogService {
     return product.toObject();
   }
 
-  async updateProduct(id: string, dto: UpdateProductDto) {
+  async updateProduct(
+    id: string,
+    dto: UpdateProductDto,
+    file?: Express.Multer.File,
+  ) {
     const product = await this.productModel.findById(id);
     if (!product) throw new NotFoundException('Product not found');
 
@@ -290,6 +306,14 @@ export class CatalogService {
     }
 
     Object.assign(product, { ...dto, slug: product.slug });
+
+    if (file) {
+      const upload = await this.cloudinaryService.uploadFile(
+        file,
+        'menu-items',
+      );
+      product.image = upload.secure_url;
+    }
 
     if (dto.price !== undefined) product.price = Math.round(dto.price);
     if (dto.oldPrice !== undefined) {

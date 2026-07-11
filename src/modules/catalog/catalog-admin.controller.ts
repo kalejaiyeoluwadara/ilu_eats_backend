@@ -7,8 +7,11 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CatalogService } from './catalog.service';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
@@ -58,16 +61,23 @@ export class CatalogAdminController {
   }
 
   @Post('stores/:storeId/menu-items')
+  @UseInterceptors(FileInterceptor('image'))
   createProduct(
     @Param('storeId') storeId: string,
     @Body() dto: CreateProductDto,
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.catalogService.createProduct(storeId, dto);
+    return this.catalogService.createProduct(storeId, dto, file);
   }
 
   @Patch('menu-items/:id')
-  updateProduct(@Param('id') id: string, @Body() dto: UpdateProductDto) {
-    return this.catalogService.updateProduct(id, dto);
+  @UseInterceptors(FileInterceptor('image'))
+  updateProduct(
+    @Param('id') id: string,
+    @Body() dto: UpdateProductDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.catalogService.updateProduct(id, dto, file);
   }
 
   @Delete('menu-items/:id')

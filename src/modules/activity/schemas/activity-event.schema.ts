@@ -1,11 +1,19 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-export type ActivitySegment = 'orders' | 'stores' | 'finance' | 'platform';
+export type ActivitySegment =
+  | 'orders'
+  | 'stores'
+  | 'finance'
+  | 'platform'
+  | 'referral';
 
 @Schema({ timestamps: true })
 export class ActivityEvent {
-  @Prop({ required: true, enum: ['orders', 'stores', 'finance', 'platform'] })
+  @Prop({
+    required: true,
+    enum: ['orders', 'stores', 'finance', 'platform', 'referral'],
+  })
   segment: ActivitySegment;
 
   @Prop({ required: true })

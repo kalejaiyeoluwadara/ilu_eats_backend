@@ -6,6 +6,7 @@ import { CatalogAdminController } from './catalog-admin.controller';
 import { Store, StoreSchema } from './schemas/store.schema';
 import { Product, ProductSchema } from './schemas/product.schema';
 import { ActivityModule } from '../activity/activity.module';
+import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ActivityModule } from '../activity/activity.module';
       { name: Product.name, schema: ProductSchema },
     ]),
     ActivityModule,
+    CloudinaryModule,
   ],
   controllers: [CatalogController, CatalogAdminController],
   providers: [CatalogService],

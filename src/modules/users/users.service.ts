@@ -8,6 +8,7 @@ import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from './schemas/user.schema';
 import { Role } from '../../common/enums/role.enum';
+import { paginate } from '../../common/dto/paginated-result.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
@@ -23,6 +24,22 @@ export class UsersService {
       email: user.email,
       phone: user.phone,
       role: user.role,
+    };
+  }
+
+  /** Fuller shape for admin screens — includes moderation and audit fields. */
+  toAdminUser(user: UserDocument) {
+    return {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isBlocked: user.isBlocked,
+      blockedAt: user.blockedAt,
+      addressCount: user.addresses.length,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
   }
 
@@ -244,4 +261,67 @@ export class UsersService {
       { $pull: { favoriteProductIds: productId } },
     );
   }
+
+  /** Paginated user directory for admins, with optional name/email search and role/status filters. */
+  async adminListUsers(params: {
+    page: number;
+    pageSize: number;
+    q?: string;
+    role?: Role;
+    status?: 'active' | 'blocked';
+  }) {
+    const { page, pageSize, q, role, status } = params;
+    const filter: Record<string, unknown> = {};
+    if (role) filter.role = role;
+    if (status) filter.isBlocked = status === 'blocked';
+    if (q?.trim()) {
+      const rx = new RegExp(escapeRegExp(q.trim()), 'i');
+      filter.$or = [{ name: rx }, { email: rx }, { phone: rx }];
+    }
+
+    const [users, totalItems] = await Promise.all([
+      this.userModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * pageSize)
+        .limit(pageSize),
+      this.userModel.countDocuments(filter),
+    ]);
+
+    return paginate(
+      users.map((u) => this.toAdminUser(u)),
+      totalItems,
+      page,
+      pageSize,
+    );
+  }
+
+  async adminGetUser(id: string) {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException('User not found');
+    return this.toAdminUser(user);
+  }
+
+  async setBlocked(id: string, blocked: boolean) {
+    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('User not found');
+    const user = await this.userModel.findByIdAndUpdate(
+      id,
+      { isBlocked: blocked, blockedAt: blocked ? new Date() : null },
+      { new: true },
+    );
+    if (!user) throw new NotFoundException('User not found');
+    return this.toAdminUser(user);
+  }
+
+  async deleteUser(id: string) {
+    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('User not found');
+    const user = await this.userModel.findByIdAndDelete(id);
+    if (!user) throw new NotFoundException('User not found');
+    return { id, deleted: true };
+  }
+}
+
+/** Escapes user-supplied text so it can be used safely inside a RegExp search. */
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

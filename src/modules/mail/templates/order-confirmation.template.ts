@@ -7,6 +7,7 @@ export interface OrderConfirmationEmailInput {
   storeName: string;
   lineItems: { name: string; qty: number; unitPrice: number }[];
   subtotal: number;
+  discount?: number;
   deliveryFee: number;
   serviceFee: number;
   total: number;
@@ -30,6 +31,16 @@ export function renderOrderConfirmationEmail(
   const [minWindow, maxWindow] = input.estimatedDeliveryWindow;
   const windowLabel =
     minWindow && maxWindow ? `${minWindow}-${maxWindow} minutes` : 'shortly';
+
+  const discount = input.discount ?? 0;
+  const discountHtml =
+    discount > 0
+      ? `
+      <tr>
+        <td style="padding:2px 0;font-size:13px;color:#1f8a4c;">Discount</td>
+        <td align="right" style="padding:2px 0;font-size:13px;color:#1f8a4c;">-${formatNaira(discount)}</td>
+      </tr>`
+      : '';
 
   const rowsHtml = input.lineItems
     .map(
@@ -60,6 +71,7 @@ export function renderOrderConfirmationEmail(
         <td style="padding:10px 0 2px 0;font-size:13px;color:#6f625c;">Subtotal</td>
         <td align="right" style="padding:10px 0 2px 0;font-size:13px;color:#6f625c;">${formatNaira(input.subtotal)}</td>
       </tr>
+      ${discountHtml}
       <tr>
         <td style="padding:2px 0;font-size:13px;color:#6f625c;">Delivery fee</td>
         <td align="right" style="padding:2px 0;font-size:13px;color:#6f625c;">${formatNaira(input.deliveryFee)}</td>
@@ -100,6 +112,7 @@ export function renderOrderConfirmationEmail(
     itemLines,
     '',
     `Subtotal: ${formatNaira(input.subtotal)}`,
+    ...(discount > 0 ? [`Discount: -${formatNaira(discount)}`] : []),
     `Delivery fee: ${formatNaira(input.deliveryFee)}`,
     `Service fee: ${formatNaira(input.serviceFee)}`,
     `Total: ${formatNaira(input.total)}`,

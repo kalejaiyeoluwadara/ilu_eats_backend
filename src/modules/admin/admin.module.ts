@@ -9,6 +9,8 @@ import { CatalogModule } from '../catalog/catalog.module';
 import { RiderModule } from '../rider/rider.module';
 import { ActivityModule } from '../activity/activity.module';
 import { PlatformModule } from '../platform/platform.module';
+import { UsersModule } from '../users/users.module';
+import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { PlatformModule } from '../platform/platform.module';
     RiderModule,
     ActivityModule,
     PlatformModule,
+    UsersModule,
+    WalletModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

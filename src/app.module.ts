@@ -15,6 +15,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { PlatformModule } from './modules/platform/platform.module';
+import { ReferralModule } from './modules/referral/referral.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { PlatformModule } from './modules/platform/platform.module';
     BannersModule,
     RiderModule,
     AdminModule,
+    ReferralModule,
   ],
   controllers: [AppController],
 })
