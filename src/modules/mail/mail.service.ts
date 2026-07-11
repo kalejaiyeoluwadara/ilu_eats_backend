@@ -213,7 +213,7 @@ export class MailService implements OnModuleInit {
 
     const { subject, html, text } = renderAdminNewOrderEmail({
       ...order,
-      adminUrl: `${this.adminUrl}/orders/${order.orderCode}`,
+      adminUrl: this.adminUrl,
       siteUrl: this.siteUrl,
       supportEmail: this.supportEmail,
     });

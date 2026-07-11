@@ -23,11 +23,30 @@ async function run() {
 
   const storeIdBySlug = new Map<string, mongoose.Types.ObjectId>();
 
+  // Approximate store coordinates around Ilishan-Remo [lng, lat] so near-me and
+  // distance-based pricing have something to work with. Refine from admin.
+  const STORE_GEO: Record<string, [number, number]> = {
+    'mama-tope': [3.72, 6.8905],
+    babrite: [3.7225, 6.893],
+    'sweet-layers': [3.725, 6.8885],
+    'burger-lab': [3.7195, 6.8875],
+    'shawarma-king': [3.721, 6.892],
+    'fresh-press': [3.7265, 6.89],
+  };
+
   for (const store of STORES_SEED) {
     const { id: _id, ...data } = store;
+    const coords = STORE_GEO[store.slug];
     const doc = await StoreModel.findOneAndUpdate(
       { slug: store.slug },
-      { $set: data },
+      {
+        $set: {
+          ...data,
+          ...(coords
+            ? { geo: { type: 'Point', coordinates: coords } }
+            : {}),
+        },
+      },
       { upsert: true, new: true },
     );
     storeIdBySlug.set(store.slug, doc._id as mongoose.Types.ObjectId);
