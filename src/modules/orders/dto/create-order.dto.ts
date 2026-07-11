@@ -3,8 +3,10 @@ import {
   IsArray,
   IsEnum,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
   ValidateIf,
   ValidateNested,
@@ -58,6 +60,21 @@ export class CreateOrderDto {
   )
   @IsString()
   landmarkId?: string;
+
+  // Drop-off coordinates from the app's map pin/GPS. When supplied together
+  // with a geocoded store, delivery is priced by distance; otherwise the
+  // store's flat deliveryFee is used.
+  @IsOptional()
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  deliveryLat?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  deliveryLng?: number;
 
   @IsString()
   contactName: string;

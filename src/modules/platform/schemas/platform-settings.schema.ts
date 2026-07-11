@@ -24,6 +24,28 @@ export class PlatformSettings {
 
   @Prop({ default: '' })
   closedMessage: string;
+
+  // --- Distance-based delivery pricing (platform-wide) ---
+  // fee = deliveryBaseFee covers deliveryFreeRadiusKm, then deliveryPerKmFee
+  // per extra km, clamped to [deliveryMinFee, deliveryMaxFee]. Beyond
+  // deliveryMaxRadiusKm a store won't deliver. Amounts in whole naira.
+  @Prop({ default: 300 })
+  deliveryBaseFee: number;
+
+  @Prop({ default: 100 })
+  deliveryPerKmFee: number;
+
+  @Prop({ default: 1 })
+  deliveryFreeRadiusKm: number;
+
+  @Prop({ default: 10 })
+  deliveryMaxRadiusKm: number;
+
+  @Prop({ default: 200 })
+  deliveryMinFee: number;
+
+  @Prop({ default: 2000 })
+  deliveryMaxFee: number;
 }
 
 export type PlatformSettingsDocument = PlatformSettings & Document;

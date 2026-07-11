@@ -12,6 +12,7 @@ import {
 import { AdminService } from './admin.service';
 import { PlatformService } from '../platform/platform.service';
 import { UpdatePlatformSettingsDto } from '../platform/dto/update-platform-settings.dto';
+import { UpdateDeliveryPricingDto } from '../platform/dto/update-delivery-pricing.dto';
 import { QueryActivityDto } from './dto/query-activity.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { BlockUserDto } from './dto/block-user.dto';
@@ -42,6 +43,16 @@ export class AdminController {
   @Patch('settings/platform')
   updatePlatformSettings(@Body() dto: UpdatePlatformSettingsDto) {
     return this.platformService.updateSettings(dto);
+  }
+
+  @Get('settings/delivery')
+  getDeliveryPricing() {
+    return this.platformService.getDeliveryPricing();
+  }
+
+  @Patch('settings/delivery')
+  updateDeliveryPricing(@Body() dto: UpdateDeliveryPricingDto) {
+    return this.platformService.updateDeliveryPricing(dto);
   }
 
   @Get('dashboard/kpis')

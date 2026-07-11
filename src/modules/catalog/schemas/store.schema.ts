@@ -1,6 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { CategoryId } from '../../../common/enums/category.enum';
+import {
+  GeoPoint,
+  GeoPointSchema,
+} from '../../../common/schemas/geo-point.schema';
 
 @Schema({ timestamps: true, suppressReservedKeysWarning: true })
 export class Store {
@@ -54,6 +58,17 @@ export class Store {
   @Prop({ default: '' })
   location: string;
 
+  // GeoJSON point [lng, lat] for distance-based fees and near-me discovery.
+  // Null for stores not yet geocoded — those are excluded from $geoNear and
+  // fall back to the flat `deliveryFee`.
+  @Prop({ type: GeoPointSchema, default: null })
+  geo: GeoPoint | null;
+
+  // Max delivery distance for this store in km; 0 defers to the platform-wide
+  // deliveryMaxRadiusKm.
+  @Prop({ default: 0 })
+  deliveryRadiusKm: number;
+
   @Prop({ type: [String], default: [] })
   tags: string[];
 
@@ -75,3 +90,4 @@ StoreSchema.index({
   location: 'text',
   tags: 'text',
 });
+StoreSchema.index({ geo: '2dsphere' });

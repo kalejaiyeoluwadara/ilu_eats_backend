@@ -6,6 +6,8 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
+  Min,
 } from 'class-validator';
 import { CategoryId } from '../../../common/enums/category.enum';
 
@@ -28,6 +30,25 @@ export class CreateStoreDto {
   @IsOptional()
   @IsString()
   location?: string;
+
+  // Coordinates for distance-based delivery + near-me discovery. Both must be
+  // supplied together to set the store's geo point.
+  @IsOptional()
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  longitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  deliveryRadiusKm?: number;
 
   @IsOptional()
   @IsString()

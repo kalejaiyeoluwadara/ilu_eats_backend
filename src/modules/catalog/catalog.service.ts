@@ -18,8 +18,24 @@ import { generateUniqueSlug } from '../../common/utils/slug.util';
 import { paginate } from '../../common/dto/paginated-result.dto';
 import { ActivityService } from '../activity/activity.service';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
+import { PlatformService } from '../platform/platform.service';
+import {
+  computeDeliveryFee,
+  ROAD_DISTANCE_FACTOR,
+} from '../../common/geo/geo.util';
 
 const PLATFORM_STORE_SLUG = 'ilueats-kitchen';
+
+/** Build a GeoJSON point from a lat/lng pair, or null unless both are present. */
+function geoFromLatLng(
+  latitude?: number,
+  longitude?: number,
+): { type: 'Point'; coordinates: number[] } | null {
+  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    return null;
+  }
+  return { type: 'Point', coordinates: [longitude, latitude] };
+}
 
 @Injectable()
 export class CatalogService {
@@ -28,6 +44,7 @@ export class CatalogService {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     private readonly activityService: ActivityService,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly platformService: PlatformService,
   ) {}
 
   async findStores(query: QueryStoresDto) {
@@ -45,6 +62,50 @@ export class CatalogService {
       .find(filter)
       .sort({ createdAt: -1 })
       .lean();
+    return { items };
+  }
+
+  /**
+   * Stores near a customer, sorted by proximity, each annotated with road
+   * distance and the delivery fee it would cost from there. Requires the
+   * 2dsphere index on `geo`; stores without coordinates are naturally excluded.
+   */
+  async findStoresNear(
+    lng: number,
+    lat: number,
+    radiusKm?: number,
+    category?: CategoryId,
+  ) {
+    const pricing = await this.platformService.getDeliveryPricing();
+    // maxDistance is straight-line metres; the display distance/fee below add
+    // the road factor. Fall back to the platform max radius when unspecified.
+    const maxDistanceMeters = (radiusKm ?? pricing.maxRadiusKm) * 1000;
+
+    const query: Record<string, any> = { isPlatform: { $ne: true } };
+    if (category && category !== ('all' as any)) query.categories = category;
+
+    const docs = await this.storeModel.aggregate([
+      {
+        $geoNear: {
+          near: { type: 'Point', coordinates: [lng, lat] },
+          distanceField: 'distanceMeters',
+          maxDistance: maxDistanceMeters,
+          spherical: true,
+          query,
+        },
+      },
+    ]);
+
+    const items = docs.map((store: any) => {
+      const distanceKm =
+        (store.distanceMeters / 1000) * ROAD_DISTANCE_FACTOR;
+      const { distanceMeters, ...rest } = store;
+      return {
+        ...rest,
+        distanceKm: Math.round(distanceKm * 10) / 10,
+        deliveryFee: computeDeliveryFee(distanceKm, pricing),
+      };
+    });
     return { items };
   }
 
@@ -106,10 +167,12 @@ export class CatalogService {
       this.storeModel,
       dto.slug || dto.name,
     );
+    const geo = geoFromLatLng(dto.latitude, dto.longitude);
     const store = await this.storeModel.create({
       ...dto,
       slug,
       categories: dto.categories?.length ? dto.categories : [CategoryId.Snacks],
+      ...(geo ? { geo } : {}),
     });
     void this.activityService.log('stores', `Store created · ${store.name}`);
     return store.toObject();
@@ -242,7 +305,12 @@ export class CatalogService {
       });
     }
 
-    Object.assign(store, { ...dto, slug: store.slug });
+    const geo = geoFromLatLng(dto.latitude, dto.longitude);
+    Object.assign(store, {
+      ...dto,
+      slug: store.slug,
+      ...(geo ? { geo } : {}),
+    });
     await store.save();
 
     if (store.slug !== previousSlug) {

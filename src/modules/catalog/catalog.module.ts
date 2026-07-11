@@ -7,6 +7,7 @@ import { Store, StoreSchema } from './schemas/store.schema';
 import { Product, ProductSchema } from './schemas/product.schema';
 import { ActivityModule } from '../activity/activity.module';
 import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
+import { PlatformModule } from '../platform/platform.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
     ]),
     ActivityModule,
     CloudinaryModule,
+    PlatformModule,
   ],
   controllers: [CatalogController, CatalogAdminController],
   providers: [CatalogService],

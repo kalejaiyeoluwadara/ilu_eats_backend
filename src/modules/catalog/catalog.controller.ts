@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { QueryStoresDto } from './dto/query-stores.dto';
+import { QueryNearbyStoresDto } from './dto/query-nearby-stores.dto';
 import { CategoryId } from '../../common/enums/category.enum';
 
 @Controller()
@@ -10,6 +11,17 @@ export class CatalogController {
   @Get('stores')
   findStores(@Query() query: QueryStoresDto) {
     return this.catalogService.findStores(query);
+  }
+
+  // Must be declared before 'stores/:slug' so "near" isn't captured as a slug.
+  @Get('stores/near')
+  findStoresNear(@Query() query: QueryNearbyStoresDto) {
+    return this.catalogService.findStoresNear(
+      query.lng,
+      query.lat,
+      query.radiusKm,
+      query.category,
+    );
   }
 
   @Get('stores/:slug')

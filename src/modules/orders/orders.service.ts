@@ -25,6 +25,11 @@ import {
   PaymentStatus,
 } from '../../common/enums/order-status.enum';
 import { paginate } from '../../common/dto/paginated-result.dto';
+import {
+  computeDeliveryFee,
+  roadDistanceKm,
+  LngLat,
+} from '../../common/geo/geo.util';
 
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   [PaymentMethod.Card]: 'Card',
@@ -271,7 +276,38 @@ export class OrdersService {
       discount = resolved.discount;
     }
 
-    const deliveryFee = store.deliveryFee;
+    // Distance-based delivery when both the store and the drop-off have
+    // coordinates; otherwise fall back to the store's flat fee (legacy /
+    // landmark orders, or stores not yet geocoded).
+    let deliveryFee: number;
+    let deliveryGeo: { type: 'Point'; coordinates: number[] } | null = null;
+    let deliveryDistanceKm: number | null = null;
+    if (
+      store.geo?.coordinates?.length === 2 &&
+      typeof dto.deliveryLat === 'number' &&
+      typeof dto.deliveryLng === 'number'
+    ) {
+      const origin: LngLat = [
+        store.geo.coordinates[0],
+        store.geo.coordinates[1],
+      ];
+      const dest: LngLat = [dto.deliveryLng, dto.deliveryLat];
+      deliveryDistanceKm = roadDistanceKm(origin, dest);
+      const pricing = await this.platformService.getDeliveryPricing();
+      const maxRadius =
+        store.deliveryRadiusKm > 0
+          ? Math.min(store.deliveryRadiusKm, pricing.maxRadiusKm)
+          : pricing.maxRadiusKm;
+      if (deliveryDistanceKm > maxRadius) {
+        throw new BadRequestException(
+          `${store.name} doesn't deliver that far — you're about ${deliveryDistanceKm.toFixed(1)}km away (max ${maxRadius}km).`,
+        );
+      }
+      deliveryFee = computeDeliveryFee(deliveryDistanceKm, pricing);
+      deliveryGeo = { type: 'Point', coordinates: dest };
+    } else {
+      deliveryFee = store.deliveryFee;
+    }
     const serviceFee = computeServiceFee(subtotal);
     const total = Math.max(0, subtotal - discount) + deliveryFee + serviceFee;
 
@@ -309,6 +345,8 @@ export class OrdersService {
         address: dto.address ?? null,
         landmarkId: dto.landmarkId ?? null,
         deliveryAddress,
+        deliveryGeo,
+        deliveryDistanceKm,
         notes: dto.notes ?? null,
         paymentMethod: dto.paymentMethod,
         paymentLabel: PAYMENT_LABELS[dto.paymentMethod],

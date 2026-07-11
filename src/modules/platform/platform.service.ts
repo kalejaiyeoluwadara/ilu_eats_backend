@@ -6,7 +6,9 @@ import {
   PlatformSettingsDocument,
 } from './schemas/platform-settings.schema';
 import { UpdatePlatformSettingsDto } from './dto/update-platform-settings.dto';
+import { UpdateDeliveryPricingDto } from './dto/update-delivery-pricing.dto';
 import { ActivityService } from '../activity/activity.service';
+import { DeliveryPricing } from '../../common/geo/geo.util';
 
 export type ClosedReason = 'manual' | 'schedule' | null;
 
@@ -87,6 +89,30 @@ export class PlatformService {
       openTime: s.openTime,
       closeTime: s.closeTime,
     };
+  }
+
+  /** Distance-based delivery pricing used by order fees and near-me listings. */
+  async getDeliveryPricing(): Promise<DeliveryPricing> {
+    const s = await this.getSettings();
+    return {
+      baseFee: s.deliveryBaseFee,
+      perKmFee: s.deliveryPerKmFee,
+      freeRadiusKm: s.deliveryFreeRadiusKm,
+      maxRadiusKm: s.deliveryMaxRadiusKm,
+      minFee: s.deliveryMinFee,
+      maxFee: s.deliveryMaxFee,
+    };
+  }
+
+  async updateDeliveryPricing(dto: UpdateDeliveryPricingDto) {
+    const settings = await this.getSettings();
+    Object.assign(settings, dto);
+    await settings.save();
+    void this.activityService.log(
+      'platform',
+      `Delivery pricing updated · ₦${settings.deliveryBaseFee} base + ₦${settings.deliveryPerKmFee}/km (max ${settings.deliveryMaxRadiusKm}km)`,
+    );
+    return this.getDeliveryPricing();
   }
 
   async updateSettings(dto: UpdatePlatformSettingsDto) {

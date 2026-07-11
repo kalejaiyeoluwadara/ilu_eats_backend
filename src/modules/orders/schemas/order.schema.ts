@@ -6,6 +6,10 @@ import {
   PaymentMethod,
   PaymentStatus,
 } from '../../../common/enums/order-status.enum';
+import {
+  GeoPoint,
+  GeoPointSchema,
+} from '../../../common/schemas/geo-point.schema';
 
 @Schema({ _id: false })
 export class OrderLineItem {
@@ -65,6 +69,15 @@ export class Order {
 
   @Prop({ default: '' })
   deliveryAddress: string;
+
+  // Customer drop-off point [lng, lat], captured from the app's map pin/GPS.
+  // Null for legacy/landmark orders that fall back to the store's flat fee.
+  @Prop({ type: GeoPointSchema, default: null })
+  deliveryGeo: GeoPoint | null;
+
+  // Approx road distance store -> customer at order time, in km (null if not geo-priced).
+  @Prop({ default: null, type: Number })
+  deliveryDistanceKm: number | null;
 
   @Prop({ default: null, type: String })
   notes: string | null;
