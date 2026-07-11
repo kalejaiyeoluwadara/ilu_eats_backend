@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  Header,
   Param,
   Patch,
   Post,
@@ -75,34 +74,6 @@ export class RiderController {
     @Param('jobId') jobId: string,
   ) {
     return this.riderService.deliver(user.id, jobId);
-  }
-
-  @Get('earnings/summary')
-  getEarningsSummary(@CurrentUser() user: AuthenticatedUser) {
-    return this.riderService.getEarningsSummary(user.id);
-  }
-
-  @Get('earnings/ledger')
-  getEarningsLedger(
-    @CurrentUser() user: AuthenticatedUser,
-    @Query() query: QueryJobsDto,
-  ) {
-    return this.riderService.getEarningsLedger(
-      user.id,
-      query.page,
-      query.pageSize,
-    );
-  }
-
-  @Get('earnings/statement')
-  @Header('Content-Type', 'text/csv')
-  @Header('Content-Disposition', 'attachment; filename="statement.csv"')
-  getStatement(
-    @CurrentUser() user: AuthenticatedUser,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-  ) {
-    return this.riderService.getStatement(user.id, from, to);
   }
 
   @Get('profile')

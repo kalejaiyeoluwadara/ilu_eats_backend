@@ -39,9 +39,6 @@ export class RiderJob {
   @Prop({ type: [OfferLineItemSchema], default: [] })
   lineItems: OfferLineItem[];
 
-  @Prop({ default: 0 })
-  tip: number;
-
   @Prop({ default: null, type: Date })
   deliveredAt: Date | null;
 }

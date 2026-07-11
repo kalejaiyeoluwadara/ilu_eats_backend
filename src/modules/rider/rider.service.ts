@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Parser as CsvParser } from 'json2csv';
 import {
   RiderProfile,
   RiderProfileDocument,
@@ -23,8 +22,6 @@ import { CreateRiderDto } from './dto/create-rider.dto';
 import { OrderStatus } from '../../common/enums/order-status.enum';
 import { Role } from '../../common/enums/role.enum';
 import { ActivityService } from '../activity/activity.service';
-
-const TIP_PERCENT = 0.15;
 
 @Injectable()
 export class RiderService {
@@ -199,10 +196,19 @@ export class RiderService {
   async getOffers(userId: string) {
     const profile = await this.getOrCreateProfile(userId);
     if (!profile.isOnline) return { items: [] };
-    const items = await this.offerModel
+    const offers = await this.offerModel
       .find({ status: 'available' })
       .limit(10)
       .lean();
+    const items = offers.map((offer) => ({
+      id: offer._id.toString(),
+      store: offer.store,
+      customer: offer.customer,
+      drop: offer.drop,
+      etaMin: offer.etaMin,
+      phone: offer.phone,
+      lineItems: offer.lineItems,
+    }));
     return { items };
   }
 
@@ -254,7 +260,6 @@ export class RiderService {
       store: job.store,
       customer: job.customer,
       address: job.address,
-      payout: job.payout,
       status: job.status,
       phone: job.phone,
       lineItems: job.lineItems,
@@ -315,7 +320,6 @@ export class RiderService {
       throw new ConflictException('Job is not en route');
     }
     job.status = 'done';
-    job.tip = Math.round(job.payout * TIP_PERCENT);
     job.deliveredAt = new Date();
     await job.save();
 
@@ -327,72 +331,7 @@ export class RiderService {
       void this.ordersService.markDeliveredSideEffects(order._id.toString());
     }
 
-    return { job: this.serializeJob(job), tip: job.tip };
-  }
-
-  async getEarningsSummary(userId: string) {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const jobsToday = await this.jobModel.find({
-      riderId: userId,
-      status: 'done',
-      deliveredAt: { $gte: startOfDay },
-    });
-
-    const basePayouts = jobsToday.reduce((sum, job) => sum + job.payout, 0);
-    const tips = jobsToday.reduce((sum, job) => sum + job.tip, 0);
-    const deliveriesToday = jobsToday.length;
-
-    return {
-      basePayouts,
-      peakBonuses: 0,
-      tips,
-      deliveriesToday,
-      onTimePercent: deliveriesToday === 0 ? 100 : 100,
-    };
-  }
-
-  async getEarningsLedger(userId: string, page: number, pageSize: number) {
-    const filter: Record<string, any> = { riderId: userId, status: 'done' };
-    const [items, totalItems] = await Promise.all([
-      this.jobModel
-        .find(filter)
-        .sort({ deliveredAt: -1 })
-        .skip((page - 1) * pageSize)
-        .limit(pageSize),
-      this.jobModel.countDocuments(filter),
-    ]);
-    return paginate(
-      items.map((j) => this.serializeJob(j)),
-      totalItems,
-      page,
-      pageSize,
-    );
-  }
-
-  async getStatement(userId: string, from?: string, to?: string) {
-    const deliveredAtRange: { $gte?: Date; $lte?: Date } = {};
-    if (from) deliveredAtRange.$gte = new Date(from);
-    if (to) deliveredAtRange.$lte = new Date(to);
-
-    const filter: Record<string, any> = { riderId: userId, status: 'done' };
-    if (from || to) filter.deliveredAt = deliveredAtRange;
-
-    const jobs = await this.jobModel.find(filter).sort({ deliveredAt: -1 });
-    const rows = jobs.map((job) => ({
-      id: job._id.toString(),
-      store: job.store,
-      customer: job.customer,
-      payout: job.payout,
-      tip: job.tip,
-      deliveredAt: job.deliveredAt?.toISOString() ?? '',
-    }));
-
-    const parser = new CsvParser({
-      fields: ['id', 'store', 'customer', 'payout', 'tip', 'deliveredAt'],
-    });
-    return parser.parse(rows);
+    return this.serializeJob(job);
   }
 
   async getProfile(userId: string) {

@@ -18,6 +18,23 @@ export default () => ({
     callbackUrl: process.env.PAYSTACK_CALLBACK_URL ?? '',
     walletCallbackUrl: process.env.PAYSTACK_WALLET_CALLBACK_URL ?? '',
   },
+  sms: {
+    // Provider is Termii for now; the SmsService is provider-agnostic so this
+    // can grow into a discriminator (e.g. 'twilio') without touching callers.
+    provider: process.env.SMS_PROVIDER ?? 'termii',
+    termii: {
+      apiKey: process.env.TERMII_API_KEY ?? '',
+      baseUrl: process.env.TERMII_BASE_URL ?? 'https://api.ng.termii.com',
+      // 'N-Alert' is Termii's shared, pre-approved DND-bypass sender — no CAC
+      // or sender-ID registration required, transactional/OTP content only.
+      senderId: process.env.TERMII_SENDER_ID ?? 'N-Alert',
+      // 'dnd' routes through the DND-bypass corridor so OTPs reach numbers with
+      // Do-Not-Disturb enabled; 'generic' is cheaper but blocked by DND.
+      channel: process.env.TERMII_CHANNEL ?? 'dnd',
+      otpTtlMinutes: parseInt(process.env.TERMII_OTP_TTL_MINUTES ?? '10', 10),
+      otpLength: parseInt(process.env.TERMII_OTP_LENGTH ?? '6', 10),
+    },
+  },
   mail: {
     host: process.env.SMTP_HOST ?? 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT ?? '587', 10),
