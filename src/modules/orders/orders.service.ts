@@ -18,6 +18,7 @@ import { resolveLinePrice } from '../../common/utils/pricing.util';
 import { ActivityService } from '../activity/activity.service';
 import { PlatformService } from '../platform/platform.service';
 import { ReferralService } from '../referral/referral.service';
+import { LandmarkService } from '../landmark/landmark.service';
 import {
   DeliveryMode,
   OrderStatus,
@@ -67,6 +68,7 @@ export class OrdersService {
     private readonly activityService: ActivityService,
     private readonly platformService: PlatformService,
     private readonly referralService: ReferralService,
+    private readonly landmarkService: LandmarkService,
   ) {}
 
   private async generateOrderCode() {
@@ -276,23 +278,40 @@ export class OrdersService {
       discount = resolved.discount;
     }
 
-    // Distance-based delivery when both the store and the drop-off have
-    // coordinates; otherwise fall back to the store's flat fee (legacy /
-    // landmark orders, or stores not yet geocoded).
-    let deliveryFee: number;
-    let deliveryGeo: { type: 'Point'; coordinates: number[] } | null = null;
-    let deliveryDistanceKm: number | null = null;
-    if (
-      store.geo?.coordinates?.length === 2 &&
+    // Resolve the delivery drop-off point. For landmark orders that's the
+    // admin-managed landmark's coordinates; for door orders it's the app's map
+    // pin. Either can be missing — then we fall back to the flat store fee.
+    let destPoint: LngLat | null = null;
+    let landmarkName: string | null = null;
+    if (dto.deliveryMode === DeliveryMode.Landmark) {
+      const landmark = dto.landmarkId
+        ? await this.landmarkService.findByIdSafe(dto.landmarkId)
+        : null;
+      if (!landmark || !landmark.isActive) {
+        throw new BadRequestException('Selected landmark is not available');
+      }
+      landmarkName = landmark.name;
+      if (landmark.geo?.coordinates?.length === 2) {
+        destPoint = [landmark.geo.coordinates[0], landmark.geo.coordinates[1]];
+      }
+    } else if (
       typeof dto.deliveryLat === 'number' &&
       typeof dto.deliveryLng === 'number'
     ) {
+      destPoint = [dto.deliveryLng, dto.deliveryLat];
+    }
+
+    // Distance-based delivery when both the store and the drop-off have
+    // coordinates; otherwise fall back to the store's flat fee.
+    let deliveryFee: number;
+    let deliveryGeo: { type: 'Point'; coordinates: number[] } | null = null;
+    let deliveryDistanceKm: number | null = null;
+    if (store.geo?.coordinates?.length === 2 && destPoint) {
       const origin: LngLat = [
         store.geo.coordinates[0],
         store.geo.coordinates[1],
       ];
-      const dest: LngLat = [dto.deliveryLng, dto.deliveryLat];
-      deliveryDistanceKm = roadDistanceKm(origin, dest);
+      deliveryDistanceKm = roadDistanceKm(origin, destPoint);
       const pricing = await this.platformService.getDeliveryPricing();
       const maxRadius =
         store.deliveryRadiusKm > 0
@@ -304,7 +323,7 @@ export class OrdersService {
         );
       }
       deliveryFee = computeDeliveryFee(deliveryDistanceKm, pricing);
-      deliveryGeo = { type: 'Point', coordinates: dest };
+      deliveryGeo = { type: 'Point', coordinates: destPoint };
     } else {
       deliveryFee = store.deliveryFee;
     }
@@ -314,7 +333,7 @@ export class OrdersService {
     const deliveryAddress =
       dto.deliveryMode === DeliveryMode.Door
         ? (dto.address ?? '')
-        : `Landmark: ${dto.landmarkId}`;
+        : (landmarkName ?? '');
 
     const orderCode = await this.generateOrderCode();
 

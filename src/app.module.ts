@@ -17,6 +17,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { PlatformModule } from './modules/platform/platform.module';
 import { ReferralModule } from './modules/referral/referral.module';
 import { SmsModule } from './modules/sms/sms.module';
+import { LandmarkModule } from './modules/landmark/landmark.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { SmsModule } from './modules/sms/sms.module';
     AdminModule,
     ReferralModule,
     SmsModule,
+    LandmarkModule,
   ],
   controllers: [AppController],
 })

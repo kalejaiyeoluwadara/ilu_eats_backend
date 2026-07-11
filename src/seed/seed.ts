@@ -3,7 +3,13 @@ import mongoose from 'mongoose';
 import { StoreSchema } from '../modules/catalog/schemas/store.schema';
 import { ProductSchema } from '../modules/catalog/schemas/product.schema';
 import { BannerSchema } from '../modules/banners/schemas/banner.schema';
-import { STORES_SEED, PRODUCTS_SEED, BANNERS_SEED } from './seed-data';
+import { LandmarkSchema } from '../modules/landmark/schemas/landmark.schema';
+import {
+  STORES_SEED,
+  PRODUCTS_SEED,
+  BANNERS_SEED,
+  LANDMARKS_SEED,
+} from './seed-data';
 
 async function run() {
   const uri = process.env.MONGODB_URI;
@@ -13,6 +19,7 @@ async function run() {
   const StoreModel = mongoose.model('Store', StoreSchema);
   const ProductModel = mongoose.model('Product', ProductSchema);
   const BannerModel = mongoose.model('Banner', BannerSchema);
+  const LandmarkModel = mongoose.model('Landmark', LandmarkSchema);
 
   const storeIdBySlug = new Map<string, mongoose.Types.ObjectId>();
 
@@ -49,6 +56,15 @@ async function run() {
       { upsert: true, new: true },
     );
     console.log(`banner upserted: ${banner.title}`);
+  }
+
+  for (const landmark of LANDMARKS_SEED) {
+    await LandmarkModel.findOneAndUpdate(
+      { slug: landmark.slug },
+      { $set: landmark },
+      { upsert: true, new: true },
+    );
+    console.log(`landmark upserted: ${landmark.slug}`);
   }
 
   await mongoose.disconnect();

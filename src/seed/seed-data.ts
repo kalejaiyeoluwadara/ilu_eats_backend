@@ -846,3 +846,81 @@ export const PRODUCTS_SEED = [
     reviews: 24,
   },
 ];
+
+// Notable landmarks in Ilishan-Remo, Ikenne LGA, Ogun State (home of Babcock
+// University). Coordinates are APPROXIMATE starting points clustered around the
+// town — admins should refine each pin from the admin landmark editor.
+export const LANDMARKS_SEED = [
+  {
+    slug: 'babcock-university-main-gate',
+    name: 'Babcock University Main Gate',
+    area: 'Ilishan-Remo',
+    description: 'Main entrance on Ilishan–Ikenne Road.',
+    geo: { type: 'Point', coordinates: [3.7186, 6.8917] },
+    isActive: true,
+  },
+  {
+    slug: 'babcock-university-teaching-hospital',
+    name: 'Babcock University Teaching Hospital (BUTH)',
+    area: 'Ilishan-Remo',
+    description: 'Teaching hospital within the Babcock campus area.',
+    geo: { type: 'Point', coordinates: [3.716, 6.8951] },
+    isActive: true,
+  },
+  {
+    slug: 'babcock-university-back-gate',
+    name: 'Babcock University Back Gate',
+    area: 'Ilishan-Remo',
+    description: 'Secondary campus gate toward the town.',
+    geo: { type: 'Point', coordinates: [3.724, 6.8945] },
+    isActive: true,
+  },
+  {
+    slug: 'ilishan-remo-town-hall',
+    name: 'Ilishan-Remo Town Hall',
+    area: 'Ilishan-Remo',
+    description: 'Central town hall.',
+    geo: { type: 'Point', coordinates: [3.7255, 6.8892] },
+    isActive: true,
+  },
+  {
+    slug: 'ilishan-central-mosque',
+    name: 'Ilishan Central Mosque',
+    area: 'Ilishan-Remo',
+    description: 'Main mosque in the town centre.',
+    geo: { type: 'Point', coordinates: [3.7238, 6.8907] },
+    isActive: true,
+  },
+  {
+    slug: 'ilishan-main-market',
+    name: 'Ilishan Main Market',
+    area: 'Ilishan-Remo',
+    description: 'Central market.',
+    geo: { type: 'Point', coordinates: [3.7268, 6.8878] },
+    isActive: true,
+  },
+  {
+    slug: 'ilishan-general-hospital',
+    name: 'Ilishan General Hospital',
+    area: 'Ilishan-Remo',
+    description: 'Government general hospital.',
+    geo: { type: 'Point', coordinates: [3.7222, 6.8867] },
+    isActive: true,
+  },
+  {
+    slug: 'ilishan-grammar-school',
+    name: 'Ilishan Grammar School',
+    area: 'Ilishan-Remo',
+    description: 'Secondary school.',
+    geo: { type: 'Point', coordinates: [3.7291, 6.8861] },
+    isActive: true,
+  },
+  {
+    slug: 'ikenne-road-junction',
+    name: 'Ikenne Road Junction',
+    area: 'Ilishan-Remo',
+    description: 'Junction toward Ikenne / Iperu.',
+    geo: { type: 'Point', coordinates: [3.7178, 6.8836] },
+    isActive: true,
+  },
+];

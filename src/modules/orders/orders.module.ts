@@ -12,6 +12,7 @@ import { MailModule } from '../mail/mail.module';
 import { ActivityModule } from '../activity/activity.module';
 import { PlatformModule } from '../platform/platform.module';
 import { ReferralModule } from '../referral/referral.module';
+import { LandmarkModule } from '../landmark/landmark.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ReferralModule } from '../referral/referral.module';
     ActivityModule,
     PlatformModule,
     ReferralModule,
+    LandmarkModule,
   ],
   controllers: [OrdersController, OrdersAdminController],
   providers: [OrdersService],
