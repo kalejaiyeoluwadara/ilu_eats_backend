@@ -27,6 +27,14 @@ import { LandmarkModule } from './modules/landmark/landmark.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         uri: config.get<string>('mongodbUri'),
+        // Serverless-friendly tuning. Each Vercel instance keeps a small pool
+        // (many short-lived instances share Atlas's connection cap), and we fail
+        // fast on an unreachable/misconfigured cluster (~5s) instead of hanging
+        // the request until the platform times out.
+        maxPoolSize: 5,
+        minPoolSize: 0,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
       }),
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),

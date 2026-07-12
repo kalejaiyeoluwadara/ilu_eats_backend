@@ -1,11 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { TransformMongoInterceptor } from './common/interceptors/transform-mongo.interceptor';
 
-async function bootstrap() {
+// Shared app construction, used by BOTH the local/persistent-host entrypoint
+// (bootstrap, below) and the Vercel serverless handler (api/index.ts). It wires
+// up middleware/pipes/interceptors but deliberately does NOT call listen() — the
+// caller decides how to serve it. Keeping this in one place stops the two
+// entrypoints drifting out of sync.
+export async function createApp(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService);
 
@@ -23,6 +28,18 @@ async function bootstrap() {
   );
   app.useGlobalInterceptors(new TransformMongoInterceptor());
 
+  return app;
+}
+
+// Local / persistent-host entrypoint (`node dist/main`, `nest start`). On Vercel
+// the entry is api/index.ts instead, so this block is skipped there and no port
+// is bound.
+async function bootstrap() {
+  const app = await createApp();
+  const config = app.get(ConfigService);
   await app.listen(config.get<number>('port') ?? 3000);
 }
-void bootstrap();
+
+if (require.main === module) {
+  void bootstrap();
+}
