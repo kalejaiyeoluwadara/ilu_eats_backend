@@ -27,12 +27,17 @@ import { LandmarkModule } from './modules/landmark/landmark.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         uri: config.get<string>('mongodbUri'),
-        // Serverless-friendly tuning. Each Vercel instance keeps a small pool
-        // (many short-lived instances share Atlas's connection cap), and we fail
-        // fast on an unreachable/misconfigured cluster (~5s) instead of hanging
-        // the request until the platform times out.
-        maxPoolSize: 5,
+        // Serverless connection budgeting. A Vercel function instance serves one
+        // request at a time, so a single pooled socket per instance is enough —
+        // a larger pool just multiplies open connections against Atlas's cap
+        // (500 on M0) as instances fan out. maxIdleTimeMS is the key lever
+        // against "connections exceeded threshold": idle/frozen instances drop
+        // their socket after 30s so Atlas reclaims it instead of holding it open.
+        maxPoolSize: 1,
         minPoolSize: 0,
+        maxIdleTimeMS: 30000,
+        // Fail fast (~5s) on an unreachable/misconfigured cluster instead of
+        // hanging the request until the platform times out.
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 45000,
       }),
