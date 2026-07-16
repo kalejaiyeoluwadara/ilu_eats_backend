@@ -9,8 +9,35 @@ import { UpdatePlatformSettingsDto } from './dto/update-platform-settings.dto';
 import { UpdateDeliveryPricingDto } from './dto/update-delivery-pricing.dto';
 import { ActivityService } from '../activity/activity.service';
 import { DeliveryPricing } from '../../common/geo/geo.util';
+import { CacheService } from '../../common/redis/cache.service';
 
 export type ClosedReason = 'manual' | 'schedule' | null;
+
+/**
+ * The subset of settings the public reads need, as a plain (cacheable) object.
+ * We cache this snapshot rather than the computed status because open/closed is
+ * derived from wall-clock time — caching the snapshot keeps schedule math live
+ * to the second while still removing the per-request Mongo read that every
+ * status poll and delivery-fee calc would otherwise trigger.
+ */
+interface SettingsSnapshot {
+  manualClosed: boolean;
+  autoScheduleEnabled: boolean;
+  openTime: string;
+  closeTime: string;
+  closedMessage: string;
+  deliveryBaseFee: number;
+  deliveryPerKmFee: number;
+  deliveryFreeRadiusKm: number;
+  deliveryMaxRadiusKm: number;
+  deliveryMinFee: number;
+  deliveryMaxFee: number;
+}
+
+/** Cache key + TTL for the settings snapshot. Writes invalidate it explicitly,
+ * so the TTL is just a safety net against a missed invalidation. */
+const SETTINGS_CACHE_KEY = 'platform:settings';
+const SETTINGS_CACHE_TTL = 60; // seconds
 
 export interface PlatformStatus {
   isOpen: boolean;
@@ -47,16 +74,43 @@ export class PlatformService {
     @InjectModel(PlatformSettings.name)
     private settingsModel: Model<PlatformSettingsDocument>,
     private readonly activityService: ActivityService,
+    private readonly cache: CacheService,
   ) {}
 
+  /** Live Mongoose document — used by the write paths, which need `.save()`. */
   async getSettings() {
     let settings = await this.settingsModel.findOne();
     if (!settings) settings = await this.settingsModel.create({});
     return settings;
   }
 
+  /** Cached plain snapshot for read paths (status + pricing). */
+  private async getSnapshot(): Promise<SettingsSnapshot> {
+    return this.cache.wrap(SETTINGS_CACHE_KEY, SETTINGS_CACHE_TTL, async () => {
+      const s = await this.getSettings();
+      return {
+        manualClosed: s.manualClosed,
+        autoScheduleEnabled: s.autoScheduleEnabled,
+        openTime: s.openTime,
+        closeTime: s.closeTime,
+        closedMessage: s.closedMessage,
+        deliveryBaseFee: s.deliveryBaseFee,
+        deliveryPerKmFee: s.deliveryPerKmFee,
+        deliveryFreeRadiusKm: s.deliveryFreeRadiusKm,
+        deliveryMaxRadiusKm: s.deliveryMaxRadiusKm,
+        deliveryMinFee: s.deliveryMinFee,
+        deliveryMaxFee: s.deliveryMaxFee,
+      };
+    });
+  }
+
+  /** Drop the cached snapshot so the next read reflects a just-saved change. */
+  private async invalidateSnapshot(): Promise<void> {
+    await this.cache.del(SETTINGS_CACHE_KEY);
+  }
+
   async getStatus(): Promise<PlatformStatus> {
-    const s = await this.getSettings();
+    const s = await this.getSnapshot();
 
     let isOpen = true;
     let reason: ClosedReason = null;
@@ -93,7 +147,7 @@ export class PlatformService {
 
   /** Distance-based delivery pricing used by order fees and near-me listings. */
   async getDeliveryPricing(): Promise<DeliveryPricing> {
-    const s = await this.getSettings();
+    const s = await this.getSnapshot();
     return {
       baseFee: s.deliveryBaseFee,
       perKmFee: s.deliveryPerKmFee,
@@ -108,6 +162,7 @@ export class PlatformService {
     const settings = await this.getSettings();
     Object.assign(settings, dto);
     await settings.save();
+    await this.invalidateSnapshot();
     void this.activityService.log(
       'platform',
       `Delivery pricing updated · ₦${settings.deliveryBaseFee} base + ₦${settings.deliveryPerKmFee}/km (max ${settings.deliveryMaxRadiusKm}km)`,
@@ -122,6 +177,7 @@ export class PlatformService {
 
     Object.assign(settings, dto);
     await settings.save();
+    await this.invalidateSnapshot();
 
     if (
       dto.manualClosed !== undefined &&

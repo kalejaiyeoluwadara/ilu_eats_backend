@@ -7,6 +7,13 @@ export default () => ({
     expiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   },
   corsOrigin: process.env.CORS_ORIGIN ?? '*',
+  redis: {
+    // Single connection string, e.g. redis://default:password@host:port
+    // (Redis Cloud). Leaving it unset disables caching and drops the throttler
+    // back to per-instance in-memory counters — the app still runs, just
+    // without the shared state.
+    url: process.env.REDIS_URL ?? '',
+  },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,
     apiKey: process.env.CLOUDINARY_API_KEY,
