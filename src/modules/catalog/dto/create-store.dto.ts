@@ -3,6 +3,7 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
@@ -13,6 +14,7 @@ import { CategoryId } from '../../../common/enums/category.enum';
 
 export class CreateStoreDto {
   @IsString()
+  @IsNotEmpty({ message: 'name should not be empty' })
   name: string;
 
   @IsOptional()
