@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   Patch,
   Post,
@@ -16,6 +17,8 @@ import { SetOnlineDto } from './dto/set-online.dto';
 import { UpdateRiderProfileDto } from './dto/update-rider-profile.dto';
 import { UploadDocumentDto } from './dto/upload-document.dto';
 import { QueryJobsDto } from './dto/query-jobs.dto';
+import { QueryStatementDto } from './dto/query-statement.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -74,6 +77,33 @@ export class RiderController {
     @Param('jobId') jobId: string,
   ) {
     return this.riderService.deliver(user.id, jobId);
+  }
+
+  @Get('earnings/summary')
+  getEarningsSummary(@CurrentUser() user: AuthenticatedUser) {
+    return this.riderService.getEarningsSummary(user.id);
+  }
+
+  @Get('earnings/ledger')
+  getEarningsLedger(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.riderService.getEarningsLedger(
+      user.id,
+      query.page,
+      query.pageSize,
+    );
+  }
+
+  @Get('earnings/statement')
+  @Header('Content-Type', 'text/csv')
+  @Header('Content-Disposition', 'attachment; filename="rider-statement.csv"')
+  getEarningsStatement(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: QueryStatementDto,
+  ) {
+    return this.riderService.getEarningsStatement(user.id, query.from, query.to);
   }
 
   @Get('profile')

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { Parser as CsvParser } from 'json2csv';
 import {
   RiderProfile,
   RiderProfileDocument,
@@ -260,6 +261,7 @@ export class RiderService {
       store: job.store,
       customer: job.customer,
       address: job.address,
+      payout: job.payout,
       status: job.status,
       phone: job.phone,
       lineItems: job.lineItems,
@@ -332,6 +334,139 @@ export class RiderService {
     }
 
     return this.serializeJob(job);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Earnings                                                            */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * Riders read "today" as their own calendar day, so this follows the server's
+   * local midnight rather than UTC's. Worth revisiting if the API ever runs
+   * outside WAT — the boundary would shift under the riders it describes.
+   */
+  private startOfToday() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  /**
+   * Tips and peak bonuses are reported as 0 because nothing in the system
+   * records either one yet — no tip is captured at checkout and no bonus rule
+   * exists. They stay in the payload so the console's breakdown keeps its
+   * shape, and become real the day the data behind them does.
+   */
+  async getEarningsSummary(userId: string) {
+    const since = this.startOfToday();
+
+    const [jobs, orders] = await Promise.all([
+      this.jobModel
+        .find({ riderId: userId, status: 'done', deliveredAt: { $gte: since } })
+        .select('payout')
+        .lean(),
+      // On-time is judged against the window the customer was promised, which
+      // lives on the order, not the job.
+      this.orderModel
+        .find({
+          riderId: userId,
+          status: OrderStatus.Delivered,
+          deliveredAt: { $gte: since },
+        })
+        .select('placedAt deliveredAt estimatedDeliveryWindow')
+        .lean(),
+    ]);
+
+    const basePayouts = jobs.reduce((sum, job) => sum + (job.payout ?? 0), 0);
+
+    const onTime = orders.filter((order) => {
+      if (!order.deliveredAt || !order.placedAt) return false;
+      const mins =
+        (order.deliveredAt.getTime() - order.placedAt.getTime()) / 60000;
+      // Upper bound of the window is the promise; the lower bound is a target.
+      const limit = order.estimatedDeliveryWindow?.[1] ?? 45;
+      return mins <= limit;
+    }).length;
+
+    return {
+      basePayouts,
+      peakBonuses: 0,
+      tips: 0,
+      deliveriesToday: jobs.length,
+      // A rider who hasn't delivered yet has broken no promises — starting them
+      // at 0% would read as a failure they didn't earn.
+      onTimePercent: orders.length
+        ? Math.round((onTime / orders.length) * 100)
+        : 100,
+    };
+  }
+
+  /** Completed drops across all time — the summary above covers just today. */
+  async getEarningsLedger(userId: string, page: number, pageSize: number) {
+    const filter = { riderId: userId, status: 'done' as const };
+
+    const [items, totalItems] = await Promise.all([
+      this.jobModel
+        .find(filter)
+        .sort({ deliveredAt: -1 })
+        .skip((page - 1) * pageSize)
+        .limit(pageSize),
+      this.jobModel.countDocuments(filter),
+    ]);
+
+    return paginate(
+      items.map((job) => this.serializeJob(job)),
+      totalItems,
+      page,
+      pageSize,
+    );
+  }
+
+  async getEarningsStatement(userId: string, from?: string, to?: string) {
+    const range: Record<string, Date> = {};
+    const fromDate = from ? new Date(from) : null;
+    const toDate = to ? new Date(to) : null;
+    if (fromDate && !Number.isNaN(fromDate.getTime())) range.$gte = fromDate;
+    if (toDate && !Number.isNaN(toDate.getTime())) range.$lte = toDate;
+
+    const jobs = await this.jobModel
+      .find({
+        riderId: userId,
+        status: 'done',
+        ...(Object.keys(range).length && { deliveredAt: range }),
+      })
+      .sort({ deliveredAt: -1 })
+      .lean();
+
+    const rows = jobs.map((job) => ({
+      id: job._id.toString(),
+      deliveredAt: job.deliveredAt ? job.deliveredAt.toISOString() : '',
+      store: job.store,
+      customer: job.customer,
+      payout: job.payout ?? 0,
+      tip: 0,
+      // Measured from acceptance, not order placement: this column is the
+      // rider's own leg of the trip, which is the part they control.
+      deliveryMins:
+        job.deliveredAt && job.createdAt
+          ? Math.round(
+              (job.deliveredAt.getTime() - job.createdAt.getTime()) / 60000,
+            )
+          : '',
+    }));
+
+    const parser = new CsvParser({
+      fields: [
+        'id',
+        'deliveredAt',
+        'store',
+        'customer',
+        'payout',
+        'tip',
+        'deliveryMins',
+      ],
+    });
+    return parser.parse(rows);
   }
 
   async getProfile(userId: string) {

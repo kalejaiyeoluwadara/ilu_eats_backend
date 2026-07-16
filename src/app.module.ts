@@ -32,15 +32,14 @@ import { UploadsModule } from './modules/uploads/uploads.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         uri: config.get<string>('mongodbUri'),
-        // Serverless connection budgeting. A Vercel function instance serves one
-        // request at a time, so a single pooled socket per instance is enough —
-        // a larger pool just multiplies open connections against Atlas's cap
-        // (500 on M0) as instances fan out. maxIdleTimeMS is the key lever
-        // against "connections exceeded threshold": idle/frozen instances drop
-        // their socket after 30s so Atlas reclaims it instead of holding it open.
-        maxPoolSize: 1,
+        // Serverless connection budgeting. An instance is reused across
+        // CONCURRENT requests, so the pool must have room for more than one
+        // in-flight query — otherwise requests queue behind a single socket.
+        // minPoolSize 0 still lets idle/frozen instances release sockets back
+        // to Atlas rather than holding them open against the cluster cap.
+        maxPoolSize: 10,
         minPoolSize: 0,
-        maxIdleTimeMS: 30000,
+        maxIdleTimeMS: 60000,
         // Fail fast (~5s) on an unreachable/misconfigured cluster instead of
         // hanging the request until the platform times out.
         serverSelectionTimeoutMS: 5000,

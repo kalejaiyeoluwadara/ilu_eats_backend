@@ -6,11 +6,16 @@ export default () => ({
     secret: process.env.JWT_SECRET ?? 'change-me',
     expiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   },
-  // Static allowlist — customer app, admin console, and local dev ports.
+  // Static allowlist — customer app, admin console, rider console, and local dev
+  // ports. Each app is listed twice: once on its .vercel.app deployment origin
+  // (where they serve from today) and once on its ilueats.com custom domain.
   corsOrigin: [
     'http://localhost:3030',
     'http://localhost:3060',
     'http://localhost:3070',
+    'https://ilueats.vercel.app',
+    'https://admin.ilueats.vercel.app',
+    'https://rider.ilueats.vercel.app',
     'https://ilueats.com',
     'https://admin.ilueats.com',
     'https://rider.ilueats.com',

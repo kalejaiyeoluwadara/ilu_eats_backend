@@ -41,6 +41,9 @@ export class RiderJob {
 
   @Prop({ default: null, type: Date })
   deliveredAt: Date | null;
+
+  /** Managed by `timestamps` — declared so reads are typed, not to define it. */
+  createdAt: Date;
 }
 
 export type RiderJobDocument = RiderJob & Document;
