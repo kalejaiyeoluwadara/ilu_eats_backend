@@ -6,7 +6,13 @@ export default () => ({
     secret: process.env.JWT_SECRET ?? 'change-me',
     expiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   },
-  corsOrigin: process.env.CORS_ORIGIN ?? '*',
+  // Comma-separated allowlist — the customer app and the admin console live on
+  // different origins, so this is a list rather than a single value. '*' keeps
+  // the old wide-open behaviour for local work.
+  corsOrigin: (process.env.CORS_ORIGIN ?? '*')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   redis: {
     // Single connection string, e.g. redis://default:password@host:port
     // (Redis Cloud). Leaving it unset disables caching and drops the throttler
@@ -53,6 +59,6 @@ export default () => ({
     supportEmail: process.env.MAIL_SUPPORT_EMAIL ?? '',
     siteUrl: process.env.MAIL_SITE_URL ?? 'https://ilueats.com',
     adminEmail: 'kalejaiyeoluwadara1@gmail.com',
-    adminUrl: process.env.MAIL_ADMIN_URL ?? 'https://ilueats.com/admin',
+    adminUrl: process.env.MAIL_ADMIN_URL ?? 'https://admin.ilueats.com',
   },
 });

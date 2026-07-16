@@ -15,8 +15,14 @@ export async function createApp(): Promise<INestApplication> {
   const config = app.get(ConfigService);
 
   app.use(helmet());
+
+  // The customer app and the admin console are separate origins, so the
+  // allowlist is a list. Note `origin: '*'` is illegal alongside
+  // credentials: true — the browser rejects the response — so a '*' entry maps
+  // to `true`, which reflects the caller's origin back instead.
+  const corsOrigins = config.get<string[]>('corsOrigin') ?? [];
   app.enableCors({
-    origin: config.get<string>('corsOrigin'),
+    origin: corsOrigins.includes('*') ? true : corsOrigins,
     credentials: true,
   });
   app.useGlobalPipes(
