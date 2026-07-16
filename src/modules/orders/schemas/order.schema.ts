@@ -11,6 +11,25 @@ import {
   GeoPointSchema,
 } from '../../../common/schemas/geo-point.schema';
 
+/**
+ * The choices behind a line's `modifiers`, kept by id rather than label.
+ * `modifiers` is display text ("2× Peppered Beef (+₦500)") and can't be turned
+ * back into a selection, so reordering needs this to rebuild the exact line.
+ */
+@Schema({ _id: false })
+export class OrderLineItemOption {
+  @Prop({ required: true })
+  groupId: string;
+
+  @Prop({ required: true })
+  choiceId: string;
+
+  @Prop({ required: true })
+  name: string;
+}
+export const OrderLineItemOptionSchema =
+  SchemaFactory.createForClass(OrderLineItemOption);
+
 @Schema({ _id: false })
 export class OrderLineItem {
   @Prop({ required: true, type: Types.ObjectId, ref: 'Product' })
@@ -27,6 +46,10 @@ export class OrderLineItem {
 
   @Prop({ type: [String], default: [] })
   modifiers: string[];
+
+  /** Empty on orders placed before this was recorded — treat as "unknown", not "none". */
+  @Prop({ type: [OrderLineItemOptionSchema], default: [] })
+  selectedOptions: OrderLineItemOption[];
 }
 export const OrderLineItemSchema = SchemaFactory.createForClass(OrderLineItem);
 

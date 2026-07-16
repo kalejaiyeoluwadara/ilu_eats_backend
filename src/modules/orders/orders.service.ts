@@ -15,7 +15,10 @@ import { CartService } from '../cart/cart.service';
 import { UsersService } from '../users/users.service';
 import { WalletService } from '../wallet/wallet.service';
 import { MailService } from '../mail/mail.service';
-import { resolveLinePrice } from '../../common/utils/pricing.util';
+import {
+  resolveLinePrice,
+  type ResolvedOption,
+} from '../../common/utils/pricing.util';
 import { ActivityService } from '../activity/activity.service';
 import { PlatformService } from '../platform/platform.service';
 import { ReferralService } from '../referral/referral.service';
@@ -125,10 +128,13 @@ export class OrdersService {
       paymentStatus: order.paymentStatus,
       paymentReference: order.paymentReference,
       lineItems: order.lineItems.map((item) => ({
+        // Exposed so the orders page can reorder straight back into the cart.
+        productId: item.productId?.toString(),
         name: item.name,
         qty: item.qty,
         unitPrice: item.unitPrice,
         modifiers: item.modifiers,
+        selectedOptions: item.selectedOptions ?? [],
       })),
       subtotal: order.subtotal,
       referralCode: order.referralCode,
@@ -247,6 +253,7 @@ export class OrdersService {
       qty: number;
       unitPrice: number;
       modifiers: string[];
+      selectedOptions: ResolvedOption[];
     }[] = [];
     for (const item of dto.items) {
       const product = productById.get(item.productId);
@@ -267,6 +274,8 @@ export class OrdersService {
         qty: item.quantity,
         unitPrice,
         modifiers: resolvedOptions.map((o) => o.name),
+        // Same selection as `modifiers`, kept by id so reorder can rebuild it.
+        selectedOptions: resolvedOptions,
       });
     }
 
