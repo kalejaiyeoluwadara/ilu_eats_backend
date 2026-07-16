@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import helmet from 'helmet';
+import type { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 import { TransformMongoInterceptor } from './common/interceptors/transform-mongo.interceptor';
 
@@ -15,6 +16,19 @@ export async function createApp(): Promise<INestApplication> {
   const config = app.get(ConfigService);
 
   app.use(helmet());
+
+  // Vercel defaults a function response to `Cache-Control: public, max-age=0,
+  // must-revalidate` and Express hangs an ETag off every JSON body. Together the
+  // browser revalidates with If-None-Match and gets a 304, whose headers omit the
+  // CORS allowances — so the browser rejects the response and reports it as a CORS
+  // failure. Only endpoints whose payload never changes between polls are hit,
+  // which is why some routes worked and others didn't. `public` is also just wrong
+  // for authenticated data: it invites shared caches to store admin payloads.
+  app.getHttpAdapter().getInstance().set('etag', false);
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
 
   // The customer app and the admin console are separate origins, so the
   // allowlist is a list. Note `origin: '*'` is illegal alongside
