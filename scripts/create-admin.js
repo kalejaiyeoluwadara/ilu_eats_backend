@@ -19,7 +19,8 @@ async function main() {
   const existing = await users.findOne({ role: 'admin' });
   if (existing) {
     console.log(`An admin already exists: ${existing.email}`);
-    console.log('No account was created. Use that email to sign in at /admin/login.');
+    console.log('No account was created. Use that email to sign in at the admin console /login.');
+    console.log('Lost the password? Run: node scripts/reset-admin-password.js');
     return;
   }
 
@@ -40,7 +41,7 @@ async function main() {
     updatedAt: now,
   });
 
-  console.log('Admin account created — sign in at /admin/login');
+  console.log('Admin account created — sign in at the admin console /login');
   console.log(`  Email:    ${email}`);
   console.log(`  Password: ${password}`);
   console.log('Change this password after first sign-in.');
