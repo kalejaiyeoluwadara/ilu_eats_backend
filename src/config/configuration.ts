@@ -6,20 +6,21 @@ export default () => ({
     secret: process.env.JWT_SECRET ?? 'change-me',
     expiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   },
-  // Static allowlist — customer app, admin console, rider console, and local dev
-  // ports. Each app is listed twice: once on its .vercel.app deployment origin
-  // (where they serve from today) and once on its ilueats.com custom domain.
-  corsOrigin: [
-    'http://localhost:3030',
-    'http://localhost:3060',
-    'http://localhost:3070',
-    'https://ilueats.vercel.app',
-    'https://admin.ilueats.vercel.app',
-    'https://rider.ilueats.vercel.app',
-    'https://ilueats.com',
-    'https://admin.ilueats.com',
-    'https://rider.ilueats.com',
-  ],
+  // TEMPORARY DIAGNOSTIC — '*' maps to `origin: true`, reflecting whatever
+  // origin calls us, so no request can be rejected by the allowlist. This is
+  // here to prove whether the "CORS error" in the admin console is really CORS.
+  // REVERT to the allowlist below once that question is answered: reflecting any
+  // origin alongside credentials: true lets any site on the internet make
+  // authenticated requests with a logged-in user's cookies.
+  corsOrigin: ['*'],
+  // corsOrigin: [
+  //   'http://localhost:3030',
+  //   'http://localhost:3060',
+  //   'http://localhost:3070',
+  //   'https://ilueats.com',
+  //   'https://admin.ilueats.com',
+  //   'https://rider.ilueats.com',
+  // ],
   redis: {
     // Single connection string, e.g. redis://default:password@host:port
     // (Redis Cloud). Leaving it unset disables caching and drops the throttler
