@@ -6,13 +6,13 @@ export default () => ({
     secret: process.env.JWT_SECRET ?? 'change-me',
     expiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   },
-  // Comma-separated allowlist — the customer app and the admin console live on
-  // different origins, so this is a list rather than a single value. '*' keeps
-  // the old wide-open behaviour for local work.
-  corsOrigin: (process.env.CORS_ORIGIN ?? '*')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean),
+  // Static allowlist — customer app, admin console, and local dev ports.
+  corsOrigin: [
+    'http://localhost:3030',
+    'http://localhost:3060',
+    'https://ilueats.com',
+    'https://admin.ilueats.com',
+  ],
   redis: {
     // Single connection string, e.g. redis://default:password@host:port
     // (Redis Cloud). Leaving it unset disables caching and drops the throttler
