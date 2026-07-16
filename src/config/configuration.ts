@@ -10,6 +10,7 @@ export default () => ({
   corsOrigin: [
     'http://localhost:3030',
     'http://localhost:3060',
+    'http://localhost:3070',
     'https://ilueats.com',
     'https://admin.ilueats.com',
     'https://rider.ilueats.com',
