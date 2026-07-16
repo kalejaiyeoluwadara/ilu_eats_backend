@@ -12,6 +12,7 @@ export default () => ({
     'http://localhost:3060',
     'https://ilueats.com',
     'https://admin.ilueats.com',
+    'https://rider.ilueats.com',
   ],
   redis: {
     // Single connection string, e.g. redis://default:password@host:port
