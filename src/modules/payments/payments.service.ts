@@ -20,6 +20,15 @@ import {
   PaystackVerifyResponse,
 } from '../paystack/paystack.service';
 import { WalletService, WALLET_TOPUP_PREFIX } from '../wallet/wallet.service';
+import { CacheService } from '../../common/redis/cache.service';
+
+/**
+ * How long a processed webhook reference is remembered. Comfortably covers
+ * Paystack's retry window (~72h) so retries/replays are short-circuited before
+ * they touch Mongo. This is a fast-path only — the DB-level atomic claim in the
+ * settle logic remains the authority on "credited exactly once".
+ */
+const WEBHOOK_DEDUP_TTL = 60 * 60 * 72; // 72 hours, in seconds
 
 @Injectable()
 export class PaymentsService {
@@ -30,6 +39,7 @@ export class PaymentsService {
     private readonly config: ConfigService,
     private readonly paystack: PaystackService,
     private readonly walletService: WalletService,
+    private readonly cache: CacheService,
   ) {}
 
   async initializePayment(userId: string, email: string, orderId: string) {
@@ -130,22 +140,43 @@ export class PaymentsService {
       return;
     }
 
-    // Wallet top-ups share the Paystack account; route them by reference.
-    if (event.data.reference?.startsWith(WALLET_TOPUP_PREFIX)) {
-      await this.walletService.settleTopup(event.data.reference, event.data);
-      return;
-    }
+    const reference = event.data.reference;
+    if (!reference) return;
 
-    const order = await this.orderModel.findOne({
-      paymentReference: event.data.reference,
-    });
-    if (!order) {
-      this.logger.warn(
-        `Webhook received for unknown reference ${event.data.reference}`,
+    // Fast path: Paystack retries a webhook until it gets a 200 and can replay
+    // deliveries, so duplicates are routine. Skipping them here avoids burning
+    // Mongo round-trips (and a connection from the size-1 serverless pool) on
+    // work whose outcome is already settled. Keying on the reference alone is
+    // sufficient: a reference has exactly one terminal outcome, and the settle
+    // logic's status guards already refuse to move a settled record anyway.
+    const dedupKey = `paystack:webhook:${reference}`;
+    if (await this.cache.get(dedupKey)) {
+      this.logger.log(
+        `Duplicate Paystack webhook skipped · ${event.event} ${reference}`,
       );
       return;
     }
 
-    await this.applyVerificationResult(order, event.data);
+    // Wallet top-ups share the Paystack account; route them by reference.
+    if (reference.startsWith(WALLET_TOPUP_PREFIX)) {
+      await this.walletService.settleTopup(reference, event.data);
+    } else {
+      const order = await this.orderModel.findOne({
+        paymentReference: reference,
+      });
+      if (!order) {
+        // Deliberately NOT marked as processed: the order record may simply not
+        // exist yet, and a later retry should still be able to settle it.
+        this.logger.warn(`Webhook received for unknown reference ${reference}`);
+        return;
+      }
+      await this.applyVerificationResult(order, event.data);
+    }
+
+    // Marked only after processing succeeded. If anything above threw, the key
+    // is never written, so Paystack's retry re-runs the work rather than being
+    // silently swallowed — the failure mode that makes "mark before processing"
+    // dangerous for money.
+    await this.cache.set(dedupKey, Date.now(), WEBHOOK_DEDUP_TTL);
   }
 }

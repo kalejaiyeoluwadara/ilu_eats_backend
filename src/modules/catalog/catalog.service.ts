@@ -19,12 +19,20 @@ import { paginate } from '../../common/dto/paginated-result.dto';
 import { ActivityService } from '../activity/activity.service';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
 import { PlatformService } from '../platform/platform.service';
+import { CacheService } from '../../common/redis/cache.service';
 import {
   computeDeliveryFee,
   ROAD_DISTANCE_FACTOR,
 } from '../../common/geo/geo.util';
 
 const PLATFORM_STORE_SLUG = 'ilueats-kitchen';
+
+/** All catalog reads share one cache namespace, so any store/product write
+ * refreshes every listing at once. Menu edits are infrequent, so this coarse
+ * invalidation costs little and sidesteps tracking cross-effects (slug renames
+ * cascading to products, popularity toggles moving items in/out of featured). */
+const CATALOG_NS = 'catalog';
+const CATALOG_TTL = 60; // seconds
 
 /** Build a GeoJSON point from a lat/lng pair, or null unless both are present. */
 function geoFromLatLng(
@@ -45,6 +53,7 @@ export class CatalogService {
     private readonly activityService: ActivityService,
     private readonly cloudinaryService: CloudinaryService,
     private readonly platformService: PlatformService,
+    private readonly cache: CacheService,
   ) {}
 
   async findStores(query: QueryStoresDto) {
@@ -58,11 +67,21 @@ export class CatalogService {
     if (query.q) {
       filter.$text = { $search: query.q };
     }
-    const items = await this.storeModel
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .lean();
-    return { items };
+
+    const run = async () => {
+      const items = await this.storeModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .lean();
+      return { items };
+    };
+
+    // Text searches are high-cardinality and rarely repeat, so caching them just
+    // churns keys — only cache the shared, browse-by-category listings (the home
+    // page and category tabs every user hits).
+    if (query.q) return run();
+    const suffix = `stores:${query.category ?? 'all'}:${query.featured ?? 'any'}`;
+    return this.cache.wrapVersioned(CATALOG_NS, suffix, CATALOG_TTL, run);
   }
 
   /**
@@ -76,43 +95,56 @@ export class CatalogService {
     radiusKm?: number,
     category?: CategoryId,
   ) {
-    const pricing = await this.platformService.getDeliveryPricing();
-    // maxDistance is straight-line metres; the display distance/fee below add
-    // the road factor. Fall back to the platform max radius when unspecified.
-    const maxDistanceMeters = (radiusKm ?? pricing.maxRadiusKm) * 1000;
+    // Bucket coordinates to ~3 decimals (~110m) so customers standing near each
+    // other share a cache entry instead of each triggering their own $geoNear
+    // aggregation. Rounding the radius/category into the key keeps variants apart.
+    const suffix = `near:${lat.toFixed(3)}:${lng.toFixed(3)}:${radiusKm ?? 'auto'}:${category ?? 'all'}`;
 
-    const query: Record<string, any> = { isPlatform: { $ne: true } };
-    if (category && category !== ('all' as any)) query.categories = category;
+    return this.cache.wrapVersioned(CATALOG_NS, suffix, CATALOG_TTL, async () => {
+      const pricing = await this.platformService.getDeliveryPricing();
+      // maxDistance is straight-line metres; the display distance/fee below add
+      // the road factor. Fall back to the platform max radius when unspecified.
+      const maxDistanceMeters = (radiusKm ?? pricing.maxRadiusKm) * 1000;
 
-    const docs = await this.storeModel.aggregate([
-      {
-        $geoNear: {
-          near: { type: 'Point', coordinates: [lng, lat] },
-          distanceField: 'distanceMeters',
-          maxDistance: maxDistanceMeters,
-          spherical: true,
-          query,
+      const query: Record<string, any> = { isPlatform: { $ne: true } };
+      if (category && category !== ('all' as any)) query.categories = category;
+
+      const docs = await this.storeModel.aggregate([
+        {
+          $geoNear: {
+            near: { type: 'Point', coordinates: [lng, lat] },
+            distanceField: 'distanceMeters',
+            maxDistance: maxDistanceMeters,
+            spherical: true,
+            query,
+          },
         },
-      },
-    ]);
+      ]);
 
-    const items = docs.map((store: any) => {
-      const distanceKm =
-        (store.distanceMeters / 1000) * ROAD_DISTANCE_FACTOR;
-      const { distanceMeters, ...rest } = store;
-      return {
-        ...rest,
-        distanceKm: Math.round(distanceKm * 10) / 10,
-        deliveryFee: computeDeliveryFee(distanceKm, pricing),
-      };
+      const items = docs.map((store: any) => {
+        const distanceKm = (store.distanceMeters / 1000) * ROAD_DISTANCE_FACTOR;
+        const { distanceMeters, ...rest } = store;
+        return {
+          ...rest,
+          distanceKm: Math.round(distanceKm * 10) / 10,
+          deliveryFee: computeDeliveryFee(distanceKm, pricing),
+        };
+      });
+      return { items };
     });
-    return { items };
   }
 
   async findStoreBySlug(slug: string) {
-    const store = await this.storeModel.findOne({ slug }).lean();
-    if (!store) throw new NotFoundException('Store not found');
-    return store;
+    return this.cache.wrapVersioned(
+      CATALOG_NS,
+      `store:${slug}`,
+      CATALOG_TTL,
+      async () => {
+        const store = await this.storeModel.findOne({ slug }).lean();
+        if (!store) throw new NotFoundException('Store not found');
+        return store;
+      },
+    );
   }
 
   async findStoreOrThrow(id: string) {
@@ -122,25 +154,49 @@ export class CatalogService {
   }
 
   async findProductsByStore(storeSlug: string, category?: CategoryId) {
-    const store = await this.storeModel.findOne({ slug: storeSlug }).lean();
-    if (!store) throw new NotFoundException('Store not found');
-    const filter: Record<string, any> = { storeId: store._id };
-    if (category) filter.category = category;
-    const items = await this.productModel.find(filter).lean();
-    return { items };
+    return this.cache.wrapVersioned(
+      CATALOG_NS,
+      `products:${storeSlug}:${category ?? 'all'}`,
+      CATALOG_TTL,
+      async () => {
+        const store = await this.storeModel.findOne({ slug: storeSlug }).lean();
+        if (!store) throw new NotFoundException('Store not found');
+        const filter: Record<string, any> = { storeId: store._id };
+        if (category) filter.category = category;
+        const items = await this.productModel.find(filter).lean();
+        return { items };
+      },
+    );
   }
 
   async findProductBySlugs(storeSlug: string, productSlug: string) {
-    const product = await this.productModel
-      .findOne({ storeSlug, slug: productSlug })
-      .lean();
-    if (!product) throw new NotFoundException('Product not found');
-    return product;
+    return this.cache.wrapVersioned(
+      CATALOG_NS,
+      `product:${storeSlug}:${productSlug}`,
+      CATALOG_TTL,
+      async () => {
+        const product = await this.productModel
+          .findOne({ storeSlug, slug: productSlug })
+          .lean();
+        if (!product) throw new NotFoundException('Product not found');
+        return product;
+      },
+    );
   }
 
   async findFeaturedProducts() {
-    const items = await this.productModel.find({ isPopular: true }).lean();
-    return { items };
+    // Same result for every user → single cache entry, highest hit rate of all.
+    return this.cache.wrapVersioned(
+      CATALOG_NS,
+      'featured',
+      CATALOG_TTL,
+      async () => {
+        const items = await this.productModel
+          .find({ isPopular: true })
+          .lean();
+        return { items };
+      },
+    );
   }
 
   async search(q: string, type: 'all' | 'stores' | 'dishes' = 'all') {
@@ -174,6 +230,7 @@ export class CatalogService {
       categories: dto.categories?.length ? dto.categories : [CategoryId.Snacks],
       ...(geo ? { geo } : {}),
     });
+    await this.cache.bumpVersion(CATALOG_NS);
     void this.activityService.log('stores', `Store created · ${store.name}`);
     return store.toObject();
   }
@@ -189,6 +246,7 @@ export class CatalogService {
       storeId: store._id,
     });
     await store.deleteOne();
+    await this.cache.bumpVersion(CATALOG_NS);
     void this.activityService.log(
       'stores',
       `Store deleted · ${store.name} (${deletedCount} item${deletedCount === 1 ? '' : 's'} removed)`,
@@ -288,6 +346,7 @@ export class CatalogService {
       storeId: store._id,
       storeSlug: store.slug,
     });
+    await this.cache.bumpVersion(CATALOG_NS);
     void this.activityService.log(
       'stores',
       `Item duplicated · ${copy.name} → ${store.name}`,
@@ -320,6 +379,7 @@ export class CatalogService {
       );
     }
 
+    await this.cache.bumpVersion(CATALOG_NS);
     return store.toObject();
   }
 
@@ -355,6 +415,7 @@ export class CatalogService {
       storeId: store._id,
       storeSlug: store.slug,
     });
+    await this.cache.bumpVersion(CATALOG_NS);
     return product.toObject();
   }
 
@@ -389,6 +450,7 @@ export class CatalogService {
     }
 
     await product.save();
+    await this.cache.bumpVersion(CATALOG_NS);
     return product.toObject();
   }
 
@@ -397,6 +459,7 @@ export class CatalogService {
       throw new BadRequestException('Invalid product id');
     const result = await this.productModel.findByIdAndDelete(id);
     if (!result) throw new NotFoundException('Product not found');
+    await this.cache.bumpVersion(CATALOG_NS);
   }
 
   async findProductsByIds(ids: string[]) {
