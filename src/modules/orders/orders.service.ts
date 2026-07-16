@@ -4,10 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Parser as CsvParser } from 'json2csv';
 import { Order, OrderDocument } from './schemas/order.schema';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { QuoteOrderDto } from './dto/quote-order.dto';
 import { QueryAdminOrdersDto } from './dto/query-admin-orders.dto';
 import { CatalogService } from '../catalog/catalog.service';
 import { CartService } from '../cart/cart.service';
@@ -209,30 +210,47 @@ export class OrdersService {
     });
   }
 
-  async createOrder(userId: string, dto: CreateOrderDto) {
+  /**
+   * Prices a basket: line items, discount, delivery and service fees.
+   *
+   * This is the single source of truth for what an order costs. `quoteOrder`
+   * shows the customer the result and `createOrder` charges it, so the two can
+   * never disagree — a fee the customer wasn't shown is not a fee we charge.
+   *
+   * Throws on anything that makes the basket unorderable (unknown store/product,
+   * mixed stores, an unavailable landmark, an address out of range). It
+   * deliberately does *not* enforce the store minimum: a basket under the
+   * minimum still has a real, showable price, and the customer needs to see the
+   * fees while they decide what else to add. `createOrder` enforces it.
+   */
+  private async priceOrder(userId: string, dto: QuoteOrderDto) {
     if (dto.items.length === 0) {
       throw new BadRequestException('Order must contain at least one item');
     }
 
-    const platform = await this.platformService.getStatus();
-    if (!platform.isOpen) {
-      throw new BadRequestException(platform.message);
-    }
-
     const store = await this.catalogService.getStoreDocById(dto.storeId);
+
+    // One round-trip for every line, rather than one per line — this runs on
+    // each quote (i.e. on every checkout keystroke that changes the basket),
+    // so a serial fetch per item would dominate the response time.
+    const productIds = [...new Set(dto.items.map((item) => item.productId))];
+    if (productIds.some((id) => !Types.ObjectId.isValid(id))) {
+      throw new NotFoundException('Product not found');
+    }
+    const products = await this.catalogService.findProductsByIds(productIds);
+    const productById = new Map(products.map((p) => [String(p._id), p]));
 
     let subtotal = 0;
     const lineItems: {
-      productId: typeof store._id;
+      productId: Types.ObjectId;
       name: string;
       qty: number;
       unitPrice: number;
       modifiers: string[];
     }[] = [];
     for (const item of dto.items) {
-      const product = await this.catalogService.getProductDocById(
-        item.productId,
-      );
+      const product = productById.get(item.productId);
+      if (!product) throw new NotFoundException('Product not found');
       if (product.storeId.toString() !== store._id.toString()) {
         throw new BadRequestException(
           'All items must belong to the same store',
@@ -252,14 +270,8 @@ export class OrdersService {
       });
     }
 
-    if (subtotal < store.minOrder) {
-      throw new BadRequestException(
-        `Subtotal must be at least ${store.minOrder} to meet ${store.name}'s minimum order`,
-      );
-    }
-
     // Resolve any referral code before computing fees so the discount reduces
-    // the amount we charge (and the wallet debit below).
+    // the amount we charge (and the wallet debit in createOrder).
     let referralCode: string | null = null;
     let referralId: string | null = null;
     let discount = 0;
@@ -329,6 +341,71 @@ export class OrdersService {
     }
     const serviceFee = computeServiceFee(subtotal);
     const total = Math.max(0, subtotal - discount) + deliveryFee + serviceFee;
+
+    return {
+      store,
+      lineItems,
+      subtotal,
+      referralCode,
+      referralId,
+      discount,
+      deliveryFee,
+      deliveryGeo,
+      deliveryDistanceKm,
+      landmarkName,
+      serviceFee,
+      total,
+    };
+  }
+
+  /**
+   * The price of a basket, for display at checkout. Same computation the charge
+   * uses; nothing here is persisted.
+   */
+  async quoteOrder(userId: string, dto: QuoteOrderDto) {
+    const priced = await this.priceOrder(userId, dto);
+    return {
+      subtotal: priced.subtotal,
+      referralCode: priced.referralCode,
+      discount: priced.discount,
+      deliveryFee: priced.deliveryFee,
+      serviceFee: priced.serviceFee,
+      total: priced.total,
+      deliveryDistanceKm:
+        priced.deliveryDistanceKm === null
+          ? null
+          : Math.round(priced.deliveryDistanceKm * 10) / 10,
+      minOrder: priced.store.minOrder,
+      meetsMinimum: priced.subtotal >= priced.store.minOrder,
+    };
+  }
+
+  async createOrder(userId: string, dto: CreateOrderDto) {
+    const platform = await this.platformService.getStatus();
+    if (!platform.isOpen) {
+      throw new BadRequestException(platform.message);
+    }
+
+    const {
+      store,
+      lineItems,
+      subtotal,
+      referralCode,
+      referralId,
+      discount,
+      deliveryFee,
+      deliveryGeo,
+      deliveryDistanceKm,
+      landmarkName,
+      serviceFee,
+      total,
+    } = await this.priceOrder(userId, dto);
+
+    if (subtotal < store.minOrder) {
+      throw new BadRequestException(
+        `Subtotal must be at least ${store.minOrder} to meet ${store.name}'s minimum order`,
+      );
+    }
 
     const deliveryAddress =
       dto.deliveryMode === DeliveryMode.Door
