@@ -12,5 +12,6 @@ import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
   ],
   controllers: [BannersController],
   providers: [BannersService],
+  exports: [BannersService],
 })
 export class BannersModule {}

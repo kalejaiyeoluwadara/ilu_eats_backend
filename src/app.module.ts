@@ -24,6 +24,7 @@ import { ReferralModule } from './modules/referral/referral.module';
 import { SmsModule } from './modules/sms/sms.module';
 import { LandmarkModule } from './modules/landmark/landmark.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
+import { HomeModule } from './modules/home/home.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
     SmsModule,
     LandmarkModule,
     UploadsModule,
+    HomeModule,
   ],
   controllers: [AppController],
   // Bind the throttler globally so the configured limit is actually enforced on
