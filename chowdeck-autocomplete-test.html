@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chowdeck autocomplete — CORS test</title>
+  <style>
+    :root { --bg:#0f1115; --card:#181b22; --line:#262a33; --fg:#e8eaed; --muted:#9aa0ab; --accent:#ff6b2c; --ok:#3ecf8e; --bad:#ff5d5d; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--fg); }
+    .wrap { max-width:640px; margin:0 auto; padding:32px 20px 64px; }
+    h1 { font-size:20px; margin:0 0 4px; }
+    p.sub { color:var(--muted); margin:0 0 24px; font-size:14px; }
+    .status { display:inline-flex; align-items:center; gap:8px; font-size:13px; padding:6px 12px; border-radius:999px; background:var(--card); border:1px solid var(--line); margin-bottom:20px; }
+    .dot { width:8px; height:8px; border-radius:50%; background:var(--muted); }
+    .dot.ok { background:var(--ok); } .dot.bad { background:var(--bad); }
+    input { width:100%; padding:14px 16px; font-size:16px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--fg); outline:none; }
+    input:focus { border-color:var(--accent); }
+    .meta { color:var(--muted); font-size:12px; margin:10px 2px; height:16px; }
+    ul { list-style:none; margin:0; padding:0; }
+    li { padding:12px 14px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; background:var(--card); }
+    .main { font-weight:600; font-size:15px; }
+    .secondary { color:var(--muted); font-size:13px; margin-top:2px; }
+    .pid { color:var(--accent); font-size:11px; font-family:ui-monospace,monospace; margin-top:4px; }
+    pre { background:#000; border:1px solid var(--line); border-radius:10px; padding:14px; overflow:auto; font-size:12px; color:var(--muted); max-height:220px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Chowdeck autocomplete — live CORS test</h1>
+    <p class="sub">Calls <code>api.chowdeck.com/place/autocomplete/json</code> directly from your browser. If results appear, CORS allows direct use.</p>
+
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">waiting for input…</span></div>
+
+    <input id="q" type="text" placeholder="Type an address, e.g. hassan od" autocomplete="off" autofocus />
+    <div class="meta" id="meta"></div>
+    <ul id="results"></ul>
+
+    <details style="margin-top:20px;">
+      <summary style="color:var(--muted);font-size:13px;cursor:pointer;">Raw response</summary>
+      <pre id="raw">—</pre>
+    </details>
+  </div>
+
+  <script>
+    const ENDPOINT = 'https://api.chowdeck.com/place/autocomplete/json';
+    const q = document.getElementById('q');
+    const results = document.getElementById('results');
+    const meta = document.getElementById('meta');
+    const raw = document.getElementById('raw');
+    const dot = document.getElementById('dot');
+    const statusText = document.getElementById('statusText');
+    let timer, controller;
+
+    function setStatus(state, text) {
+      dot.className = 'dot' + (state ? ' ' + state : '');
+      statusText.textContent = text;
+    }
+
+    async function search(input) {
+      if (controller) controller.abort();
+      controller = new AbortController();
+      const t0 = performance.now();
+      try {
+        const res = await fetch(`${ENDPOINT}?input=${encodeURIComponent(input)}`, { signal: controller.signal });
+        const ms = Math.round(performance.now() - t0);
+        const data = await res.json();
+        setStatus('ok', `CORS OK — ${res.status} in ${ms}ms`);
+        raw.textContent = JSON.stringify(data, null, 2);
+        render(data.predictions || []);
+        meta.textContent = `${(data.predictions || []).length} predictions · status: ${data.status}`;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        setStatus('bad', `Blocked / failed: ${err.message}`);
+        meta.textContent = 'If this says "Failed to fetch", CORS or network blocked the call.';
+        results.innerHTML = '';
+      }
+    }
+
+    function render(preds) {
+      results.innerHTML = preds.map(p => {
+        const sf = p.structured_formatting || {};
+        return `<li>
+          <div class="main">${escape(sf.main_text || p.description || '')}</div>
+          <div class="secondary">${escape(sf.secondary_text || p.description || '')}</div>
+          <div class="pid">place_id: ${escape(p.place_id || '')}</div>
+        </li>`;
+      }).join('');
+    }
+
+    function escape(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+    q.addEventListener('input', () => {
+      const v = q.value.trim();
+      clearTimeout(timer);
+      if (v.length < 2) { setStatus('', 'waiting for input…'); results.innerHTML = ''; meta.textContent = ''; return; }
+      setStatus('', 'searching…');
+      timer = setTimeout(() => search(v), 250);
+    });
+  </script>
+</body>
+</html>

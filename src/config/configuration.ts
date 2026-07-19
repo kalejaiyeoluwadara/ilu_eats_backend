@@ -77,12 +77,20 @@ export default () => ({
     // provider-agnostic so this can grow into a discriminator (e.g. 'mapbox')
     // without touching callers.
     provider: process.env.GEOCODING_PROVIDER ?? 'google',
-    // Appended to the query when autocomplete finds nothing and we fall back to
+    // Appended to the query when autocomplete is sparse and we fall back to
     // full-text search, so a sparse local term ("hassan dudu") resolves inside
     // the service area instead of returning empty. Set empty to disable the
     // appended context (the fallback still runs on the raw query).
     textSearchAreaHint:
       process.env.GEOCODING_TEXT_SEARCH_HINT ?? 'Ilishan-Remo, Ogun State',
+    // Run the (pricier) text-search fallback whenever autocomplete returns
+    // FEWER than this many suggestions, not only when it returns zero — local
+    // queries often yield one weak hit, and the fallback surfaces the real
+    // street. Set to 1 to only fall back on a fully empty autocomplete.
+    textSearchFallbackThreshold: parseInt(
+      process.env.GEOCODING_TEXT_SEARCH_FALLBACK_THRESHOLD ?? '3',
+      10,
+    ),
     google: {
       apiKey: process.env.GOOGLE_MAPS_API_KEY ?? '',
       // Bias autocomplete toward our service area (Ilisan-Remo) and restrict to
@@ -94,11 +102,14 @@ export default () => ({
       // Ilishan-Remo and its immediate surroundings while excluding neighbouring
       // towns (Sagamu, Ijebu-Ode).
       biasRadiusM: parseInt(process.env.GEOCODING_BIAS_RADIUS_M ?? '8000', 10),
-      // Hard-limit results to that circle rather than only ranking by it, so a
-      // search never surfaces addresses we don't deliver to. Set 'false' to fall
-      // back to soft bias (results outside the area still appear, ranked lower).
+      // Bias (default) ranks local results first but still surfaces matches
+      // outside the circle; delivery-area enforcement happens on the resolved
+      // coordinates via `inServiceArea` at selection time, not by hiding
+      // suggestions. Set 'true' to instead HARD-limit autocomplete to the
+      // circle — note Google returns almost nothing for short local queries
+      // under restriction, so bias gives a far better picker.
       restrictToArea:
-        (process.env.GEOCODING_RESTRICT_TO_AREA ?? 'true') !== 'false',
+        (process.env.GEOCODING_RESTRICT_TO_AREA ?? 'false') === 'true',
       regionCode: process.env.GEOCODING_REGION_CODE ?? 'ng',
       languageCode: process.env.GEOCODING_LANGUAGE_CODE ?? 'en',
     },

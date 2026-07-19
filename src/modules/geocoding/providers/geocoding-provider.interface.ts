@@ -19,6 +19,13 @@ export interface PlaceDetails {
   name: string;
   lat: number;
   lng: number;
+  /**
+   * Whether the resolved coordinates fall inside the delivery area. Lets the
+   * client flag an out-of-area pick ("we don't deliver here yet") instead of
+   * hiding out-of-area suggestions up front — the picker stays useful while the
+   * delivery guarantee is enforced on the actual coordinates.
+   */
+  inServiceArea: boolean;
 }
 
 /**
@@ -43,4 +50,8 @@ export interface GeocodingProvider {
    * query so a sparse local term ("hassan dudu") resolves.
    */
   textSearch(query: string): Promise<PlaceDetails[]>;
+  /** Resolve raw device coordinates (from "use my location") into an address. */
+  reverseGeocode(lat: number, lng: number): Promise<PlaceDetails>;
+  /** Whether a coordinate falls inside the configured delivery area. */
+  isWithinServiceArea(lat: number, lng: number): boolean;
 }

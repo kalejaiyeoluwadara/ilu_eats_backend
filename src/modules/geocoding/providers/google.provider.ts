@@ -118,6 +118,10 @@ export class GoogleGeocodingProvider implements GeocodingProvider {
       name: data.displayName?.text ?? '',
       lat: data.location.latitude,
       lng: data.location.longitude,
+      inServiceArea: this.isWithinServiceArea(
+        data.location.latitude,
+        data.location.longitude,
+      ),
     };
   }
 
@@ -160,13 +164,57 @@ export class GoogleGeocodingProvider implements GeocodingProvider {
         name: p.displayName?.text ?? '',
         lat: p.location.latitude,
         lng: p.location.longitude,
+        inServiceArea: this.isWithinServiceArea(
+          p.location.latitude,
+          p.location.longitude,
+        ),
       }));
 
     // Trim the rectangle's corners to a circle so neighbouring towns that fall
     // in the box (e.g. Sagamu) but outside the delivery radius are dropped.
     return this.config.restrictToArea
-      ? results.filter((r) => this.withinArea(r.lat, r.lng))
+      ? results.filter((r) => this.isWithinServiceArea(r.lat, r.lng))
       : results;
+  }
+
+  /**
+   * Reverse geocode via the classic Geocoding API — turns the device's GPS
+   * coordinates into a formatted street address for "use my current location".
+   * (Enable "Geocoding API" in Google Cloud; it's separate from Places.)
+   */
+  async reverseGeocode(lat: number, lng: number): Promise<PlaceDetails> {
+    const url =
+      `https://maps.googleapis.com/maps/api/geocode/json` +
+      `?latlng=${lat},${lng}` +
+      `&language=${encodeURIComponent(this.config.languageCode)}` +
+      `&region=${encodeURIComponent(this.config.regionCode)}` +
+      `&key=${encodeURIComponent(this.config.apiKey)}`;
+
+    const res = await fetch(url);
+    const data = (await res.json().catch(() => ({}))) as GeocodeApiResponse;
+
+    // The Geocoding API signals problems in `status`, not the HTTP code.
+    if (data.status && data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+      this.fail(
+        'Reverse Geocode',
+        res.status,
+        data.error_message ?? data.status,
+      );
+    }
+    const r = data.results?.[0];
+    if (!r) {
+      throw new NotFoundException('No address found for your location');
+    }
+    const rLat = r.geometry?.location?.lat ?? lat;
+    const rLng = r.geometry?.location?.lng ?? lng;
+    return {
+      placeId: r.place_id ?? '',
+      address: r.formatted_address ?? '',
+      name: '',
+      lat: rLat,
+      lng: rLng,
+      inServiceArea: this.isWithinServiceArea(rLat, rLng),
+    };
   }
 
   /** The service area as a circle, for autocomplete restriction/bias. */
@@ -203,7 +251,7 @@ export class GoogleGeocodingProvider implements GeocodingProvider {
   }
 
   /** True when (lat,lng) is within biasRadiusM of the service-area center. */
-  private withinArea(lat: number, lng: number): boolean {
+  isWithinServiceArea(lat: number, lng: number): boolean {
     const R = 6_371_000; // Earth radius, metres.
     const toRad = (d: number) => (d * Math.PI) / 180;
     const dLat = toRad(lat - this.config.biasLat);
@@ -286,4 +334,14 @@ interface PlaceResult {
 interface TextSearchResponse {
   places?: PlaceResult[];
   error?: { message?: string };
+}
+
+interface GeocodeApiResponse {
+  status?: string;
+  error_message?: string;
+  results?: {
+    place_id?: string;
+    formatted_address?: string;
+    geometry?: { location?: { lat: number; lng: number } };
+  }[];
 }

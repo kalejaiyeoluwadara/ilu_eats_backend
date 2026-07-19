@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { GeocodingService } from './geocoding.service';
 import { AutocompleteDto } from './dto/autocomplete.dto';
 import { PlaceDetailsDto } from './dto/place-details.dto';
+import { ReverseGeocodeDto } from './dto/reverse-geocode.dto';
 
 /**
  * Address autocomplete proxy. Guarded so only signed-in customers can spend the
@@ -29,5 +30,11 @@ export class GeocodingController {
     @Query() query: PlaceDetailsDto,
   ) {
     return this.geocoding.placeDetails(placeId, query.sessionToken);
+  }
+
+  /** GET /geocoding/reverse?lat=..&lng=.. — resolve device GPS to an address. */
+  @Get('reverse')
+  reverse(@Query() query: ReverseGeocodeDto) {
+    return this.geocoding.reverseGeocode(query.lat, query.lng);
   }
 }
