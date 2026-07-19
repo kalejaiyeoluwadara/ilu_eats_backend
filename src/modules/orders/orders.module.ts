@@ -9,6 +9,7 @@ import { CartModule } from '../cart/cart.module';
 import { UsersModule } from '../users/users.module';
 import { WalletModule } from '../wallet/wallet.module';
 import { MailModule } from '../mail/mail.module';
+import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { ActivityModule } from '../activity/activity.module';
 import { PlatformModule } from '../platform/platform.module';
 import { ReferralModule } from '../referral/referral.module';
@@ -22,6 +23,7 @@ import { LandmarkModule } from '../landmark/landmark.module';
     UsersModule,
     WalletModule,
     MailModule,
+    WhatsappModule,
     ActivityModule,
     PlatformModule,
     ReferralModule,

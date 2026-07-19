@@ -22,9 +22,11 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { PlatformModule } from './modules/platform/platform.module';
 import { ReferralModule } from './modules/referral/referral.module';
 import { SmsModule } from './modules/sms/sms.module';
+import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 import { LandmarkModule } from './modules/landmark/landmark.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { HomeModule } from './modules/home/home.module';
+import { GeocodingModule } from './modules/geocoding/geocoding.module';
 
 @Module({
   imports: [
@@ -84,9 +86,11 @@ import { HomeModule } from './modules/home/home.module';
     AdminModule,
     ReferralModule,
     SmsModule,
+    WhatsappModule,
     LandmarkModule,
     UploadsModule,
     HomeModule,
+    GeocodingModule,
   ],
   controllers: [AppController],
   // Bind the throttler globally so the configured limit is actually enforced on

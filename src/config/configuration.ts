@@ -50,6 +50,59 @@ export default () => ({
       otpLength: parseInt(process.env.TERMII_OTP_LENGTH ?? '6', 10),
     },
   },
+  whatsapp: {
+    // Provider is Meta's WhatsApp Cloud API for now; the WhatsappService is
+    // provider-agnostic so this can grow into a discriminator (e.g. 'twilio')
+    // without touching callers.
+    provider: process.env.WHATSAPP_PROVIDER ?? 'meta',
+    meta: {
+      accessToken: process.env.WHATSAPP_ACCESS_TOKEN ?? '',
+      // The Phone Number ID from the Meta dashboard — NOT the phone number.
+      phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID ?? '',
+      graphVersion: process.env.WHATSAPP_GRAPH_VERSION ?? 'v21.0',
+      // Must match the language of the approved templates below.
+      languageCode: process.env.WHATSAPP_LANGUAGE_CODE ?? 'en',
+    },
+    // Names of the pre-approved message templates in Meta Business Manager.
+    // Order updates are business-initiated, so they can only go out as templates.
+    templates: {
+      orderPrepared: process.env.WHATSAPP_TEMPLATE_ORDER_PREPARED ?? 'order_prepared',
+      riderAssigned: process.env.WHATSAPP_TEMPLATE_RIDER_ASSIGNED ?? 'rider_assigned',
+      orderDelivered:
+        process.env.WHATSAPP_TEMPLATE_ORDER_DELIVERED ?? 'order_delivered',
+    },
+  },
+  geocoding: {
+    // Provider is Google Places (New) for now; the GeocodingService is
+    // provider-agnostic so this can grow into a discriminator (e.g. 'mapbox')
+    // without touching callers.
+    provider: process.env.GEOCODING_PROVIDER ?? 'google',
+    // Appended to the query when autocomplete finds nothing and we fall back to
+    // full-text search, so a sparse local term ("hassan dudu") resolves inside
+    // the service area instead of returning empty. Set empty to disable the
+    // appended context (the fallback still runs on the raw query).
+    textSearchAreaHint:
+      process.env.GEOCODING_TEXT_SEARCH_HINT ?? 'Ilishan-Remo, Ogun State',
+    google: {
+      apiKey: process.env.GOOGLE_MAPS_API_KEY ?? '',
+      // Bias autocomplete toward our service area (Ilisan-Remo) and restrict to
+      // Nigeria so a two-letter query surfaces local streets/landmarks rather
+      // than same-named places worldwide. Center matches the app's map default.
+      biasLat: parseFloat(process.env.GEOCODING_BIAS_LAT ?? '6.8944'),
+      biasLng: parseFloat(process.env.GEOCODING_BIAS_LNG ?? '3.7186'),
+      // Radius of the service area around the center, in metres. ~8km keeps
+      // Ilishan-Remo and its immediate surroundings while excluding neighbouring
+      // towns (Sagamu, Ijebu-Ode).
+      biasRadiusM: parseInt(process.env.GEOCODING_BIAS_RADIUS_M ?? '8000', 10),
+      // Hard-limit results to that circle rather than only ranking by it, so a
+      // search never surfaces addresses we don't deliver to. Set 'false' to fall
+      // back to soft bias (results outside the area still appear, ranked lower).
+      restrictToArea:
+        (process.env.GEOCODING_RESTRICT_TO_AREA ?? 'true') !== 'false',
+      regionCode: process.env.GEOCODING_REGION_CODE ?? 'ng',
+      languageCode: process.env.GEOCODING_LANGUAGE_CODE ?? 'en',
+    },
+  },
   mail: {
     host: process.env.SMTP_HOST ?? 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT ?? '587', 10),

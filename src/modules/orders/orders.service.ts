@@ -15,6 +15,7 @@ import { CartService } from '../cart/cart.service';
 import { UsersService } from '../users/users.service';
 import { WalletService } from '../wallet/wallet.service';
 import { MailService } from '../mail/mail.service';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
 import {
   resolveLinePrice,
   type ResolvedOption,
@@ -69,6 +70,7 @@ export class OrdersService {
     private readonly usersService: UsersService,
     private readonly walletService: WalletService,
     private readonly mailService: MailService,
+    private readonly whatsappService: WhatsappService,
     private readonly activityService: ActivityService,
     private readonly platformService: PlatformService,
     private readonly referralService: ReferralService,
@@ -603,8 +605,20 @@ export class OrdersService {
     }
     await order.save();
 
+    if (status === OrderStatus.Preparing) {
+      void this.whatsappService.sendOrderPrepared(order.customerPhone, {
+        customerName: order.customerName,
+        orderCode: order.orderCode,
+        storeName: order.storeName,
+      });
+    }
+
     if (status === OrderStatus.Delivered) {
       void this.sendOrderDeliveredEmail(order);
+      void this.whatsappService.sendOrderDelivered(order.customerPhone, {
+        customerName: order.customerName,
+        orderCode: order.orderCode,
+      });
       void this.activityService.log(
         'orders',
         `Order delivered · ${order.orderCode} · ${order.storeName}`,
@@ -618,6 +632,10 @@ export class OrdersService {
     const order = await this.orderModel.findById(orderId);
     if (!order) return;
     void this.sendOrderDeliveredEmail(order);
+    void this.whatsappService.sendOrderDelivered(order.customerPhone, {
+      customerName: order.customerName,
+      orderCode: order.orderCode,
+    });
   }
 
   async notifyRiderAssigned(
@@ -628,6 +646,11 @@ export class OrdersService {
     const order = await this.orderModel.findById(orderId);
     if (!order) return;
     void this.sendRiderAssignedEmail(order, riderName, riderPhone);
+    void this.whatsappService.sendRiderAssigned(order.customerPhone, {
+      customerName: order.customerName,
+      riderName,
+      orderCode: order.orderCode,
+    });
   }
 
   async exportCsv(query: QueryAdminOrdersDto) {
