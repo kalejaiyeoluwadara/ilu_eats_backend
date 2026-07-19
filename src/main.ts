@@ -17,6 +17,13 @@ export async function createApp(): Promise<INestApplication> {
 
   app.use(helmet());
 
+  // Behind Vercel's proxy, Express otherwise reports the platform's socket
+  // address for req.ip and drops X-Forwarded-For. Trusting the proxy restores
+  // the real caller IP so per-IP rate limiting can actually distinguish callers.
+  // (Rate limiting keys on Vercel's non-spoofable `x-real-ip` via
+  // ThrottlerBehindProxyGuard, so a spoofed X-Forwarded-For can't bypass it.)
+  app.getHttpAdapter().getInstance().set('trust proxy', true);
+
   // Vercel defaults a function response to `Cache-Control: public, max-age=0,
   // must-revalidate` and Express hangs an ETag off every JSON body. Together the
   // browser revalidates with If-None-Match and gets a 304, whose headers omit the

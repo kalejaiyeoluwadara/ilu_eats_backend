@@ -2,8 +2,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import { ThrottlerBehindProxyGuard } from './common/guards/throttler-behind-proxy.guard';
 import configuration from './config/configuration';
 import { RedisModule } from './common/redis/redis.module';
 import { getRedisClient } from './common/redis/redis.client';
@@ -58,7 +59,11 @@ import { UploadsModule } from './modules/uploads/uploads.module';
       useFactory: (config: ConfigService) => {
         const client = getRedisClient(config.get<string>('redis.url'));
         return {
-          throttlers: [{ ttl: 60000, limit: 100 }],
+          // Named so individual routes can opt into a stricter budget via
+          // @Throttle({ default: ... }) — see the auth controller. The general
+          // ceiling is a generous 100 req/min PER IP (now that the guard keys on
+          // the real client IP); abusive callers hit it long before Redis/Mongo.
+          throttlers: [{ name: 'default', ttl: 60000, limit: 100 }],
           storage: client
             ? new ThrottlerStorageRedisService(client)
             : undefined,
@@ -86,6 +91,8 @@ import { UploadsModule } from './modules/uploads/uploads.module';
   // every route (the module was previously registered but never guarded, so no
   // rate limiting happened). Combined with the Redis storage above, this is a
   // single global limit across all serverless instances.
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [
+    { provide: APP_GUARD, useClass: ThrottlerBehindProxyGuard },
+  ],
 })
 export class AppModule {}
