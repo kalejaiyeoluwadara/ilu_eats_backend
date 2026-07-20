@@ -30,6 +30,12 @@ import {
 export class GeocodingService implements OnModuleInit {
   private readonly logger = new Logger(GeocodingService.name);
   private provider!: GeocodingProvider;
+  /**
+   * Google always, regardless of GEOCODING_PROVIDER. Kept alongside the
+   * configured provider so the admin store-location search can require Google's
+   * richer place coverage even when customer address search runs on Chowdeck.
+   */
+  private googleProvider!: GoogleGeocodingProvider;
 
   /** Place coordinates are immutable, so a day is safe and cheap. */
   private static readonly DETAILS_TTL_SECONDS = 60 * 60 * 24;
@@ -40,6 +46,11 @@ export class GeocodingService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
+    // Built unconditionally; it self-reports as unconfigured when the key is
+    // missing, so both reverse geocoding and the admin Google path degrade
+    // cleanly. Reused as the configured provider when GEOCODING_PROVIDER=google.
+    this.googleProvider = this.buildGoogleProvider();
+
     const providerName =
       this.config.get<string>('geocoding.provider') ?? 'google';
     switch (providerName) {
@@ -47,14 +58,13 @@ export class GeocodingService implements OnModuleInit {
         this.provider = new ChowdeckGeocodingProvider(
           this.config.get<ChowdeckGeocodingConfig>('geocoding.chowdeck')!,
           // Google (when a key is set) still serves reverse geocoding, which
-          // Chowdeck can't do. Built unconditionally; it self-reports as
-          // unconfigured when the key is missing, so reverse degrades cleanly.
-          this.buildGoogleProvider(),
+          // Chowdeck can't do.
+          this.googleProvider,
         );
         break;
       case 'google':
       default:
-        this.provider = this.buildGoogleProvider();
+        this.provider = this.googleProvider;
     }
 
     if (!this.provider.isConfigured()) {
@@ -64,13 +74,30 @@ export class GeocodingService implements OnModuleInit {
     }
   }
 
-  async autocomplete(
+  autocomplete(query: string, sessionToken: string): Promise<PlaceSuggestion[]> {
+    return this.autocompleteWith(this.provider, query, sessionToken);
+  }
+
+  /**
+   * Autocomplete forced onto Google, for the admin store-location search. Isolated
+   * from the customer-facing {@link autocomplete} so a Chowdeck rollout can't
+   * regress store onboarding, which relies on Google's business/place coverage.
+   */
+  googleAutocomplete(
     query: string,
     sessionToken: string,
   ): Promise<PlaceSuggestion[]> {
-    this.assertConfigured();
+    return this.autocompleteWith(this.googleProvider, query, sessionToken);
+  }
+
+  private async autocompleteWith(
+    provider: GeocodingProvider,
+    query: string,
+    sessionToken: string,
+  ): Promise<PlaceSuggestion[]> {
+    this.assertConfigured(provider);
     const q = query.trim();
-    const suggestions = await this.provider.autocomplete(q, sessionToken);
+    const suggestions = await provider.autocomplete(q, sessionToken);
 
     // Autocomplete is thin on obscure local spots — even street-level Ilishan
     // queries often return one weak hit or none. When it comes back sparser than
@@ -83,13 +110,13 @@ export class GeocodingService implements OnModuleInit {
 
     const hint =
       this.config.get<string>('geocoding.textSearchAreaHint')?.trim() ?? '';
-    const places = await this.provider.textSearch(hint ? `${q} ${hint}` : q);
+    const places = await provider.textSearch(hint ? `${q} ${hint}` : q);
     // Pre-cache each hit's coordinates so selecting it needs no extra Place
     // Details lookup (or billing).
     await Promise.all(
       places.map((p) =>
         this.cache.set(
-          this.placeKey(p.placeId),
+          this.placeKey(provider, p.placeId),
           p,
           GeocodingService.DETAILS_TTL_SECONDS,
         ),
@@ -110,13 +137,26 @@ export class GeocodingService implements OnModuleInit {
   }
 
   placeDetails(placeId: string, sessionToken: string) {
-    this.assertConfigured();
+    return this.placeDetailsWith(this.provider, placeId, sessionToken);
+  }
+
+  /** Google-forced counterpart to {@link placeDetails} for the admin store search. */
+  googlePlaceDetails(placeId: string, sessionToken: string) {
+    return this.placeDetailsWith(this.googleProvider, placeId, sessionToken);
+  }
+
+  private placeDetailsWith(
+    provider: GeocodingProvider,
+    placeId: string,
+    sessionToken: string,
+  ) {
+    this.assertConfigured(provider);
     // Cache by place id only — the session token varies per user but the
     // resolved coordinates/address for a place do not.
     return this.cache.wrap(
-      this.placeKey(placeId),
+      this.placeKey(provider, placeId),
       GeocodingService.DETAILS_TTL_SECONDS,
-      () => this.provider.placeDetails(placeId, sessionToken),
+      () => provider.placeDetails(placeId, sessionToken),
     );
   }
 
@@ -126,7 +166,7 @@ export class GeocodingService implements OnModuleInit {
    * replacement for the old manual "I'm in Ilishan-Remo" tick).
    */
   async reverseGeocode(lat: number, lng: number): Promise<PlaceDetails> {
-    this.assertConfigured();
+    this.assertConfigured(this.provider);
     const key = `geocode:reverse:${this.provider.name}:${lat.toFixed(5)},${lng.toFixed(5)}`;
     // The resolved PlaceDetails already carries `inServiceArea` (computed by the
     // provider from the matched coordinates).
@@ -143,8 +183,8 @@ export class GeocodingService implements OnModuleInit {
     );
   }
 
-  private placeKey(placeId: string): string {
-    return `geocode:place:${this.provider.name}:${placeId}`;
+  private placeKey(provider: GeocodingProvider, placeId: string): string {
+    return `geocode:place:${provider.name}:${placeId}`;
   }
 
   /** Present a text-search hit the same way an autocomplete suggestion looks. */
@@ -155,8 +195,8 @@ export class GeocodingService implements OnModuleInit {
     return { placeId: p.placeId, primary, secondary, full: p.address };
   }
 
-  private assertConfigured() {
-    if (!this.provider.isConfigured()) {
+  private assertConfigured(provider: GeocodingProvider) {
+    if (!provider.isConfigured()) {
       throw new ServiceUnavailableException('Address search is not configured');
     }
   }
