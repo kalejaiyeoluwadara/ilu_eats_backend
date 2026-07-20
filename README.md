@@ -1,98 +1,132 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# ìlúEats — Backend API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> **Your town. Your taste. Delivered.**
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The NestJS REST API powering **ìlúEats**, a hyper-local, town-first food
+delivery network — starting with Ilisan, Ogun State. It serves three clients:
+the customer web app, the admin console, and the rider app. Built to run both on
+a persistent host and as a Vercel serverless function.
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Tech stack
 
-## Project setup
+| | |
+|---|---|
+| **Framework** | NestJS 11 (Express platform) |
+| **Language** | TypeScript |
+| **Database** | MongoDB + Mongoose |
+| **Cache / rate limit** | Redis (ioredis) — optional, falls back to in-memory |
+| **Auth** | JWT (Passport) + bcrypt |
+| **Payments** | Paystack (checkout, webhooks, wallet) |
+| **Media** | Cloudinary (uploads via Multer) |
+| **Notifications** | Termii (SMS/OTP), Meta WhatsApp Cloud API, Nodemailer (SMTP) |
+| **Geocoding** | Google Places (New) / Chowdeck place proxy |
+| **Hardening** | Helmet, global validation pipe, throttling behind proxy |
+| **Docs / exports** | PDFKit, json2csv |
+
+---
+
+## Modules
+
+Domain modules live under `src/modules/`:
+
+| Module | Responsibility |
+|---|---|
+| `auth` | Signup/login, JWT issuance, OTP |
+| `users` | Customer accounts & profiles |
+| `catalog` | Stores & products (Atlas Search + `$text` fallback) |
+| `cart` | Server-side carts |
+| `orders` | Order lifecycle & status transitions |
+| `payments` / `paystack` | Paystack checkout & webhook handling |
+| `wallet` | Paystack-reconciled customer wallet |
+| `rider` | Rider accounts, assignment & delivery queue |
+| `admin` | Admin console back office |
+| `banners` / `home` | Merchandising & homepage feed |
+| `geocoding` / `landmark` | Address autocomplete, reverse geocoding, service-area checks |
+| `sms` / `whatsapp` / `mail` | Notification channels (order events, OTP) |
+| `platform` | Platform status / config |
+| `referral` | Referral program |
+| `uploads` | Cloudinary media uploads |
+
+Shared code (guards, interceptors, DTOs, enums, Redis, geo, schemas) lives under
+`src/common/`; runtime config is centralized in `src/config/configuration.ts`.
+
+---
+
+## Cross-cutting behavior
+
+- **CORS** — static allowlist (customer, admin, rider origins + local ports).
+- **Validation** — global `ValidationPipe` with `whitelist` + `forbidNonWhitelisted`.
+- **Rate limiting** — 100 req/min per real client IP, enforced globally via Redis
+  when `REDIS_URL` is set (per-instance in-memory otherwise).
+- **Serverless-aware** — Mongo pool budgeting, `trust proxy`, disabled ETag, and
+  `Cache-Control: no-store` so warm Vercel invocations reuse the same connection.
+- **Response shaping** — `TransformMongoInterceptor` normalizes Mongo documents.
+
+---
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 20+
+- MongoDB (local or Atlas)
+- (Optional) Redis, and API keys for Paystack / Cloudinary / Termii / WhatsApp / Google
+
+### Setup
 
 ```bash
-$ npm install
+npm install
+cp .env.example .env        # fill in the values (see below)
+npm run start:dev           # watch mode, http://localhost:3000
 ```
 
-## Compile and run the project
+### Seed data
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run seed                # base seed
+npm run seed:landmarks      # landmark data
 ```
 
-## Run tests
+---
 
-```bash
-# unit tests
-$ npm run test
+## Environment variables
 
-# e2e tests
-$ npm run test:e2e
+Full reference lives in `.env.example`. Key groups:
 
-# test coverage
-$ npm run test:cov
-```
+- **Core** — `PORT`, `NODE_ENV`, `MONGODB_URI`, `REDIS_URL`
+- **Auth** — `JWT_SECRET`, `JWT_EXPIRES_IN`
+- **Paystack** — `PAYSTACK_SECRET_KEY`, `PAYSTACK_PUBLIC_KEY`, callback URLs
+- **Cloudinary** — `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+- **SMS (Termii)** — `TERMII_API_KEY`, sender/channel/OTP settings
+- **WhatsApp (Meta)** — `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, template names
+- **Mail (SMTP)** — `SMTP_*`, `MAIL_*`
+- **Geocoding** — `GEOCODING_PROVIDER` (`chowdeck` | `google`), `GOOGLE_MAPS_API_KEY`, service-area bias
+
+Notification and geocoding integrations degrade gracefully: leave a provider's
+key empty to disable that channel cleanly rather than crash.
+
+---
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm run start:dev` | Dev server, watch mode |
+| `npm run start:prod` | Run compiled build (`node dist/main`) |
+| `npm run build` | Compile with `nest build` |
+| `npm run lint` | ESLint (autofix) |
+| `npm run format` | Prettier |
+| `npm run test` / `test:e2e` / `test:cov` | Jest unit / e2e / coverage |
+| `npm run seed` / `seed:landmarks` | Seed the database |
+
+---
 
 ## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Runs on **Vercel** as a serverless function. `api/index.ts` is the entrypoint —
+it builds the Nest app once and caches the Express handler (and Mongo
+connection) across warm invocations; `src/main.ts`'s `createApp()` is shared
+between this and the local `node dist/main` entrypoint so the two never drift.
+Routing is configured in `vercel.json`.
