@@ -2,6 +2,7 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { QueryStoresDto } from './dto/query-stores.dto';
 import { QueryNearbyStoresDto } from './dto/query-nearby-stores.dto';
+import { SearchDto, SuggestDto } from './dto/search.dto';
 import { CategoryId } from '../../common/enums/category.enum';
 
 @Controller()
@@ -61,10 +62,18 @@ export class CatalogController {
   }
 
   @Get('search')
-  search(
-    @Query('q') q: string,
-    @Query('type') type?: 'all' | 'stores' | 'dishes',
-  ) {
-    return this.catalogService.search(q, type);
+  search(@Query() query: SearchDto) {
+    return this.catalogService.search(
+      query.q ?? '',
+      query.type ?? 'all',
+      query.page ?? 1,
+      query.pageSize ?? 20,
+    );
+  }
+
+  // Lightweight as-you-type suggestions for the search box.
+  @Get('search/suggest')
+  suggest(@Query() query: SuggestDto) {
+    return this.catalogService.suggest(query.q ?? '', query.limit ?? 6);
   }
 }

@@ -1,7 +1,9 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -24,6 +26,14 @@ import {
   computeDeliveryFee,
   ROAD_DISTANCE_FACTOR,
 } from '../../common/geo/geo.util';
+import { SearchType } from './dto/search.dto';
+import {
+  PRODUCT_SEARCH_DEFINITION,
+  PRODUCT_SEARCH_INDEX,
+  STORE_SEARCH_DEFINITION,
+  STORE_SEARCH_INDEX,
+  ensureSearchIndexes,
+} from './search-indexes';
 
 const PLATFORM_STORE_SLUG = 'ilueats-kitchen';
 
@@ -46,7 +56,14 @@ function geoFromLatLng(
 }
 
 @Injectable()
-export class CatalogService {
+export class CatalogService implements OnModuleInit {
+  private readonly logger = new Logger(CatalogService.name);
+
+  /** Flips to false the first time an Atlas `$search` stage errors (e.g. the
+   * index isn't built yet, or the cluster has no Search), so we stop paying the
+   * failed-round-trip cost and serve the `$text` fallback until next restart. */
+  private atlasSearchAvailable = true;
+
   constructor(
     @InjectModel(Store.name) private storeModel: Model<StoreDocument>,
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
@@ -55,6 +72,21 @@ export class CatalogService {
     private readonly platformService: PlatformService,
     private readonly cache: CacheService,
   ) {}
+
+  async onModuleInit() {
+    await ensureSearchIndexes([
+      {
+        model: this.productModel,
+        name: PRODUCT_SEARCH_INDEX,
+        definition: PRODUCT_SEARCH_DEFINITION,
+      },
+      {
+        model: this.storeModel,
+        name: STORE_SEARCH_INDEX,
+        definition: STORE_SEARCH_DEFINITION,
+      },
+    ]);
+  }
 
   async findStores(query: QueryStoresDto) {
     const filter: Record<string, any> = { isPlatform: { $ne: true } };
@@ -100,38 +132,45 @@ export class CatalogService {
     // aggregation. Rounding the radius/category into the key keeps variants apart.
     const suffix = `near:${lat.toFixed(3)}:${lng.toFixed(3)}:${radiusKm ?? 'auto'}:${category ?? 'all'}`;
 
-    return this.cache.wrapVersioned(CATALOG_NS, suffix, CATALOG_TTL, async () => {
-      const pricing = await this.platformService.getDeliveryPricing();
-      // maxDistance is straight-line metres; the display distance/fee below add
-      // the road factor. Fall back to the platform max radius when unspecified.
-      const maxDistanceMeters = (radiusKm ?? pricing.maxRadiusKm) * 1000;
+    return this.cache.wrapVersioned(
+      CATALOG_NS,
+      suffix,
+      CATALOG_TTL,
+      async () => {
+        const pricing = await this.platformService.getDeliveryPricing();
+        // maxDistance is straight-line metres; the display distance/fee below add
+        // the road factor. Fall back to the platform max radius when unspecified.
+        const maxDistanceMeters = (radiusKm ?? pricing.maxRadiusKm) * 1000;
 
-      const query: Record<string, any> = { isPlatform: { $ne: true } };
-      if (category && category !== ('all' as any)) query.categories = category;
+        const query: Record<string, any> = { isPlatform: { $ne: true } };
+        if (category && category !== ('all' as any))
+          query.categories = category;
 
-      const docs = await this.storeModel.aggregate([
-        {
-          $geoNear: {
-            near: { type: 'Point', coordinates: [lng, lat] },
-            distanceField: 'distanceMeters',
-            maxDistance: maxDistanceMeters,
-            spherical: true,
-            query,
+        const docs = await this.storeModel.aggregate([
+          {
+            $geoNear: {
+              near: { type: 'Point', coordinates: [lng, lat] },
+              distanceField: 'distanceMeters',
+              maxDistance: maxDistanceMeters,
+              spherical: true,
+              query,
+            },
           },
-        },
-      ]);
+        ]);
 
-      const items = docs.map((store: any) => {
-        const distanceKm = (store.distanceMeters / 1000) * ROAD_DISTANCE_FACTOR;
-        const { distanceMeters, ...rest } = store;
-        return {
-          ...rest,
-          distanceKm: Math.round(distanceKm * 10) / 10,
-          deliveryFee: computeDeliveryFee(distanceKm, pricing),
-        };
-      });
-      return { items };
-    });
+        const items = docs.map((store: any) => {
+          const distanceKm =
+            (store.distanceMeters / 1000) * ROAD_DISTANCE_FACTOR;
+          const { distanceMeters, ...rest } = store;
+          return {
+            ...rest,
+            distanceKm: Math.round(distanceKm * 10) / 10,
+            deliveryFee: computeDeliveryFee(distanceKm, pricing),
+          };
+        });
+        return { items };
+      },
+    );
   }
 
   async findStoreBySlug(slug: string) {
@@ -191,31 +230,229 @@ export class CatalogService {
       'featured',
       CATALOG_TTL,
       async () => {
-        const items = await this.productModel
-          .find({ isPopular: true })
-          .lean();
+        const items = await this.productModel.find({ isPopular: true }).lean();
         return { items };
       },
     );
   }
 
-  async search(q: string, type: 'all' | 'stores' | 'dishes' = 'all') {
-    const result: { stores: any[]; products: any[] } = {
-      stores: [],
-      products: [],
+  /**
+   * Customer-facing search across stores and dishes.
+   *
+   * Uses Atlas Search when available: a compound query that must match the
+   * name (fuzzy, tolerant of typos), an autocomplete prefix, or the
+   * description, then boosts popular / higher-rated items so the best matches
+   * float to the top. Falls back to a `$text` search (sorted by textScore) if
+   * the Atlas index isn't ready yet, so search never goes dark during rollout.
+   */
+  async search(q: string, type: SearchType = 'all', page = 1, pageSize = 20) {
+    const term = q?.trim();
+    const empty = { stores: [], products: [] };
+    if (!term) return empty;
+
+    const wantStores = type === 'all' || type === 'stores';
+    const wantDishes = type === 'all' || type === 'dishes';
+    const limit = Math.min(Math.max(pageSize, 1), 50);
+    const skip = (Math.max(page, 1) - 1) * limit;
+
+    const [stores, products] = await Promise.all([
+      wantStores ? this.searchStores(term, limit, skip) : Promise.resolve([]),
+      wantDishes ? this.searchProducts(term, limit, skip) : Promise.resolve([]),
+    ]);
+    return { stores, products };
+  }
+
+  /** Typo-tolerant name suggestions for the search box (as-you-type). */
+  async suggest(q: string, limit = 6) {
+    const term = q?.trim();
+    if (!term) return { stores: [], products: [] };
+    const size = Math.min(Math.max(limit, 1), 10);
+
+    if (!this.atlasSearchAvailable) {
+      const rx = new RegExp(
+        `^${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+        'i',
+      );
+      const [stores, products] = await Promise.all([
+        this.storeModel
+          .find({ name: rx, isPlatform: { $ne: true } })
+          .select('name slug image')
+          .limit(size)
+          .lean(),
+        this.productModel
+          .find({ name: rx })
+          .select('name slug storeSlug image')
+          .limit(size)
+          .lean(),
+      ]);
+      return { stores, products };
+    }
+
+    const autocomplete = {
+      query: term,
+      path: 'name',
+      fuzzy: { maxEdits: 1, prefixLength: 1 },
     };
-    if (!q) return result;
-    if (type === 'all' || type === 'stores') {
-      result.stores = await this.storeModel
-        .find({ $text: { $search: q }, isPlatform: { $ne: true } })
-        .lean();
+
+    try {
+      const [stores, products] = await Promise.all([
+        this.storeModel.aggregate([
+          {
+            $search: {
+              index: STORE_SEARCH_INDEX,
+              autocomplete,
+            },
+          },
+          { $match: { isPlatform: { $ne: true } } },
+          { $limit: size },
+          { $project: { name: 1, slug: 1, image: 1 } },
+        ]),
+        this.productModel.aggregate([
+          {
+            $search: { index: PRODUCT_SEARCH_INDEX, autocomplete },
+          },
+          { $limit: size },
+          { $project: { name: 1, slug: 1, storeSlug: 1, image: 1 } },
+        ]),
+      ]);
+      return { stores, products };
+    } catch (err) {
+      this.disableAtlasSearch('suggest', err);
+      return this.suggest(q, limit);
     }
-    if (type === 'all' || type === 'dishes') {
-      result.products = await this.productModel
-        .find({ $text: { $search: q } })
-        .lean();
+  }
+
+  /** Compound clause shared by store/product search: a match on any of name
+   * (fuzzy), name-prefix, or description, with name weighted highest. */
+  private nameTextClause(term: string) {
+    return {
+      compound: {
+        should: [
+          {
+            text: {
+              query: term,
+              path: 'name',
+              score: { boost: { value: 5 } },
+              fuzzy: { maxEdits: 1, prefixLength: 1, maxExpansions: 50 },
+            },
+          },
+          {
+            autocomplete: {
+              query: term,
+              path: 'name',
+              score: { boost: { value: 3 } },
+              fuzzy: { maxEdits: 1, prefixLength: 1 },
+            },
+          },
+          {
+            text: {
+              query: term,
+              path: 'description',
+              fuzzy: { maxEdits: 1, prefixLength: 2 },
+            },
+          },
+        ],
+        minimumShouldMatch: 1,
+      },
+    };
+  }
+
+  private async searchProducts(term: string, limit: number, skip: number) {
+    if (this.atlasSearchAvailable) {
+      try {
+        return await this.productModel.aggregate([
+          {
+            $search: {
+              index: PRODUCT_SEARCH_INDEX,
+              compound: {
+                must: [this.nameTextClause(term)],
+                // Popular dishes get a scoring nudge without excluding others.
+                should: [
+                  {
+                    equals: {
+                      path: 'isPopular',
+                      value: true,
+                      score: { boost: { value: 2 } },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          { $skip: skip },
+          { $limit: limit },
+          { $set: { searchScore: { $meta: 'searchScore' } } },
+        ]);
+      } catch (err) {
+        this.disableAtlasSearch('product search', err);
+      }
     }
-    return result;
+    return this.productModel
+      .find({ $text: { $search: term } }, { score: { $meta: 'textScore' } })
+      .sort({ score: { $meta: 'textScore' } })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
+
+  private async searchStores(term: string, limit: number, skip: number) {
+    if (this.atlasSearchAvailable) {
+      try {
+        return await this.storeModel.aggregate([
+          {
+            $search: {
+              index: STORE_SEARCH_INDEX,
+              compound: {
+                must: [this.nameTextClause(term)],
+                should: [
+                  // Secondary signals: match on tagline/location/tags, plus a
+                  // scoring nudge for stores that are currently open.
+                  {
+                    text: {
+                      query: term,
+                      path: ['tagline', 'location', 'tags'],
+                      fuzzy: { maxEdits: 1, prefixLength: 2 },
+                    },
+                  },
+                  {
+                    equals: {
+                      path: 'isOpen',
+                      value: true,
+                      score: { boost: { value: 2 } },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          // Hidden house store must never surface in customer search.
+          { $match: { isPlatform: { $ne: true } } },
+          { $skip: skip },
+          { $limit: limit },
+          { $set: { searchScore: { $meta: 'searchScore' } } },
+        ]);
+      } catch (err) {
+        this.disableAtlasSearch('store search', err);
+      }
+    }
+    return this.storeModel
+      .find(
+        { $text: { $search: term }, isPlatform: { $ne: true } },
+        { score: { $meta: 'textScore' } },
+      )
+      .sort({ score: { $meta: 'textScore' } })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
+
+  private disableAtlasSearch(context: string, err: unknown) {
+    if (this.atlasSearchAvailable) {
+      this.logger.warn(
+        `Atlas Search unavailable during ${context}, falling back to $text: ${(err as Error).message}`,
+      );
+    }
+    this.atlasSearchAvailable = false;
   }
 
   async createStore(dto: CreateStoreDto) {
@@ -402,8 +639,7 @@ export class CatalogService {
       dto.oldPrice && dto.oldPrice > 0 ? Math.round(dto.oldPrice) : null;
 
     const image = file
-      ? (await this.cloudinaryService.uploadFile(file, 'menu-items'))
-          .secure_url
+      ? (await this.cloudinaryService.uploadFile(file, 'menu-items')).secure_url
       : dto.image;
 
     const product = await this.productModel.create({

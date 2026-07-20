@@ -1,0 +1,56 @@
+[
+  {
+    "title": "5 new kitchens just landed 🎉",
+    "subtitle": "Fresh flavours now delivering near you — tap in and taste what's new.",
+    "cta": "Explore new stores",
+    "href": "/stores",
+    "image": "https://res.cloudinary.com/diccn7l1x/image/upload/v1784563600/tasty2_idgw7s.png",
+    "badge": "Just added",
+    "order": 3
+  },
+  {
+    "title": "Blessed9ra: Eat, Play, Connect",
+    "subtitle": "Nigerian meals, small chops, drinks & shawarma — the taste of celebration.",
+    "cta": "Explore menu",
+    "href": "/blessed9ra",
+    "image": "https://res.cloudinary.com/diccn7l1x/image/upload/v1784562298/blesses2_ke9noe.png",
+    "badge": "New",
+    "order": 4
+  },
+  {
+    "title": "Yung Bearer's Kitchen is open",
+    "subtitle": "A taste of luxury in every bite — local plates, snacks & cold drinks.",
+    "cta": "Taste the luxury",
+    "href": "/yung-bearers-kitchen",
+    "image": "https://res.cloudinary.com/diccn7l1x/image/upload/v1784563974/ChatGPT_Image_Jul_20_2026_05_12_28_PM_hpxl5u.png",
+    "badge": "New",
+    "order": 5
+  },
+  {
+    "title": "Tasty 'n' Rich just opened",
+    "subtitle": "Small chops, shawarma, smoothies & more — all in one delicious spot.",
+    "cta": "Dig in",
+    "href": "/tasty-n-rich",
+    "image": "https://res.cloudinary.com/diccn7l1x/image/upload/v1784563600/tasty2_idgw7s.png",
+    "badge": "New",
+    "order": 6
+  },
+  {
+    "title": "Faitys Place — Royal Pleasant Kitchen",
+    "subtitle": "Hearty local plates, sides and chilled drinks, freshly served.",
+    "cta": "Order now",
+    "href": "/faitys-place",
+    "image": "https://res.cloudinary.com/diccn7l1x/image/upload/v1784562296/faity_gwn0zu.png",
+    "badge": "New",
+    "order": 7
+  },
+  {
+    "title": "Gbadun Precious Kitchen is here",
+    "subtitle": "Home-style Nigerian classics, cooked fresh to order.",
+    "cta": "Order now",
+    "href": "/gbadun-precious-kitchen",
+    "image": "https://res.cloudinary.com/diccn7l1x/image/upload/v1784566418/ChatGPT_Image_Jul_20_2026_05_52_38_PM_qtaoq8.png",
+    "badge": "New",
+    "order": 8
+  }
+]
