@@ -15,6 +15,10 @@ import {
   GoogleGeocodingConfig,
   GoogleGeocodingProvider,
 } from './providers/google.provider';
+import {
+  ChowdeckGeocodingConfig,
+  ChowdeckGeocodingProvider,
+} from './providers/chowdeck.provider';
 
 /**
  * App-facing address autocomplete + resolution. Resolves a concrete driver from
@@ -39,11 +43,18 @@ export class GeocodingService implements OnModuleInit {
     const providerName =
       this.config.get<string>('geocoding.provider') ?? 'google';
     switch (providerName) {
+      case 'chowdeck':
+        this.provider = new ChowdeckGeocodingProvider(
+          this.config.get<ChowdeckGeocodingConfig>('geocoding.chowdeck')!,
+          // Google (when a key is set) still serves reverse geocoding, which
+          // Chowdeck can't do. Built unconditionally; it self-reports as
+          // unconfigured when the key is missing, so reverse degrades cleanly.
+          this.buildGoogleProvider(),
+        );
+        break;
       case 'google':
       default:
-        this.provider = new GoogleGeocodingProvider(
-          this.config.get<GoogleGeocodingConfig>('geocoding.google')!,
-        );
+        this.provider = this.buildGoogleProvider();
     }
 
     if (!this.provider.isConfigured()) {
@@ -123,6 +134,12 @@ export class GeocodingService implements OnModuleInit {
       key,
       GeocodingService.DETAILS_TTL_SECONDS,
       () => this.provider.reverseGeocode(lat, lng),
+    );
+  }
+
+  private buildGoogleProvider(): GoogleGeocodingProvider {
+    return new GoogleGeocodingProvider(
+      this.config.get<GoogleGeocodingConfig>('geocoding.google')!,
     );
   }
 

@@ -1,5 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import {
+  GeoPoint,
+  GeoPointSchema,
+} from '../../../common/schemas/geo-point.schema';
 
 @Schema({ _id: false })
 export class OfferLineItem {
@@ -29,6 +33,11 @@ export class RiderOffer {
 
   @Prop({ required: true })
   drop: string;
+
+  // Customer drop-off point [lng, lat], copied from the order so the rider can
+  // see the exact spot on a map. Null when the order had no pin (landmark-only).
+  @Prop({ type: GeoPointSchema, default: null })
+  geo: GeoPoint | null;
 
   @Prop({ required: true })
   pay: number;

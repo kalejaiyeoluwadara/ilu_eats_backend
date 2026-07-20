@@ -113,6 +113,17 @@ export default () => ({
       regionCode: process.env.GEOCODING_REGION_CODE ?? 'ng',
       languageCode: process.env.GEOCODING_LANGUAGE_CODE ?? 'en',
     },
+    // Chowdeck's open place proxy — indexes grassroots local spots Google's
+    // autocomplete misses, needs no API key. When selected as the provider,
+    // Google (if configured) still serves reverse geocoding ("use my location"),
+    // which Chowdeck cannot do. Reuses the GEOCODING_BIAS_* service area for the
+    // in-area check.
+    chowdeck: {
+      baseUrl: process.env.CHOWDECK_PLACE_BASE_URL ?? 'https://api.chowdeck.com',
+      biasLat: parseFloat(process.env.GEOCODING_BIAS_LAT ?? '6.8944'),
+      biasLng: parseFloat(process.env.GEOCODING_BIAS_LNG ?? '3.7186'),
+      biasRadiusM: parseInt(process.env.GEOCODING_BIAS_RADIUS_M ?? '8000', 10),
+    },
   },
   mail: {
     host: process.env.SMTP_HOST ?? 'smtp.gmail.com',

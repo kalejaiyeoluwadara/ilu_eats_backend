@@ -1,6 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { OfferLineItem, OfferLineItemSchema } from './rider-offer.schema';
+import {
+  GeoPoint,
+  GeoPointSchema,
+} from '../../../common/schemas/geo-point.schema';
 
 export type RiderJobStatus = 'pickup' | 'en_route' | 'done';
 
@@ -22,6 +26,11 @@ export class RiderJob {
 
   @Prop({ required: true })
   address: string;
+
+  // Customer drop-off point [lng, lat], carried from the offer/order so the
+  // rider can navigate to the exact spot. Null when the order had no pin.
+  @Prop({ type: GeoPointSchema, default: null })
+  geo: GeoPoint | null;
 
   @Prop({ required: true })
   payout: number;

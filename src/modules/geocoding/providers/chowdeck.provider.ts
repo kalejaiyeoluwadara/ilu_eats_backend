@@ -61,8 +61,19 @@ export class ChowdeckGeocodingProvider implements GeocodingProvider {
     const url = `${this.base()}/place/autocomplete/json?input=${encodeURIComponent(query)}`;
     const data = await this.get<AutocompleteResponse>(url, 'Autocomplete');
 
+    // Chowdeck (OSM-backed) often returns the same address several times with
+    // different place ids. Collapse duplicates by description so the picker
+    // shows each distinct place once, keeping the first (best-ranked) id.
+    const seen = new Set<string>();
+
     return (data.predictions ?? [])
       .filter((p): p is Prediction => Boolean(p.place_id && p.description))
+      .filter((p) => {
+        const key = p.description.trim().toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
       .map((p) => {
         // The specific address lives in `description`; structured_formatting's
         // main_text is only the locality ("Ilishan-Remo"), so we split the

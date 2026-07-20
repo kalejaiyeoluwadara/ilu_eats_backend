@@ -12,6 +12,7 @@ import {
 } from './schemas/rider-profile.schema';
 import { RiderOffer, RiderOfferDocument } from './schemas/rider-offer.schema';
 import { RiderJob, RiderJobDocument } from './schemas/rider-job.schema';
+import { GeoPoint } from '../../common/schemas/geo-point.schema';
 import { UpdateRiderProfileDto } from './dto/update-rider-profile.dto';
 import { DocumentType } from './schemas/rider-profile.schema';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
@@ -148,6 +149,7 @@ export class RiderService {
       store: order.storeName,
       customer: order.customerName,
       drop: order.deliveryAddress,
+      geo: order.deliveryGeo,
       pay: order.deliveryFee,
       etaMin: order.estimatedDeliveryWindow[1] ?? 45,
       phone: order.customerPhone,
@@ -166,6 +168,7 @@ export class RiderService {
       store: offer.store,
       customer: offer.customer,
       address: offer.drop,
+      geo: offer.geo,
       payout: offer.pay,
       status: 'pickup',
       phone: offer.phone,
@@ -206,6 +209,7 @@ export class RiderService {
       store: offer.store,
       customer: offer.customer,
       drop: offer.drop,
+      geo: this.toLatLng(offer.geo),
       etaMin: offer.etaMin,
       phone: offer.phone,
       lineItems: offer.lineItems,
@@ -246,6 +250,7 @@ export class RiderService {
       store: offer.store,
       customer: offer.customer,
       address: offer.drop,
+      geo: offer.geo,
       payout: offer.pay,
       status: 'pickup',
       phone: offer.phone,
@@ -255,12 +260,23 @@ export class RiderService {
     return this.serializeJob(job);
   }
 
+  /**
+   * Convert the stored GeoJSON point ([lng, lat]) into the {lat, lng} the rider
+   * app's map expects. Null when the order carried no drop-off pin.
+   */
+  private toLatLng(geo: GeoPoint | null): { lat: number; lng: number } | null {
+    const coords = geo?.coordinates;
+    if (!coords || coords.length < 2) return null;
+    return { lat: coords[1], lng: coords[0] };
+  }
+
   private serializeJob(job: RiderJobDocument) {
     return {
       id: job._id.toString(),
       store: job.store,
       customer: job.customer,
       address: job.address,
+      geo: this.toLatLng(job.geo),
       payout: job.payout,
       status: job.status,
       phone: job.phone,
