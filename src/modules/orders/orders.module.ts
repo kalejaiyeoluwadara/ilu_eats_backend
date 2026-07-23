@@ -14,6 +14,7 @@ import { ActivityModule } from '../activity/activity.module';
 import { PlatformModule } from '../platform/platform.module';
 import { ReferralModule } from '../referral/referral.module';
 import { LandmarkModule } from '../landmark/landmark.module';
+import { GeocodingModule } from '../geocoding/geocoding.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { LandmarkModule } from '../landmark/landmark.module';
     PlatformModule,
     ReferralModule,
     LandmarkModule,
+    GeocodingModule,
   ],
   controllers: [OrdersController, OrdersAdminController],
   providers: [OrdersService],

@@ -8,6 +8,7 @@ import { Product, ProductSchema } from './schemas/product.schema';
 import { ActivityModule } from '../activity/activity.module';
 import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
 import { PlatformModule } from '../platform/platform.module';
+import { GeocodingModule } from '../geocoding/geocoding.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { PlatformModule } from '../platform/platform.module';
     ActivityModule,
     CloudinaryModule,
     PlatformModule,
+    GeocodingModule,
   ],
   controllers: [CatalogController, CatalogAdminController],
   providers: [CatalogService],

@@ -22,10 +22,8 @@ import { ActivityService } from '../activity/activity.service';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
 import { PlatformService } from '../platform/platform.service';
 import { CacheService } from '../../common/redis/cache.service';
-import {
-  computeDeliveryFee,
-  ROAD_DISTANCE_FACTOR,
-} from '../../common/geo/geo.util';
+import { computeDeliveryFee, LngLat } from '../../common/geo/geo.util';
+import { GeocodingService } from '../geocoding/geocoding.service';
 import { SearchType } from './dto/search.dto';
 import {
   PRODUCT_SEARCH_DEFINITION,
@@ -43,6 +41,13 @@ const PLATFORM_STORE_SLUG = 'ilueats-kitchen';
  * cascading to products, popularity toggles moving items in/out of featured). */
 const CATALOG_NS = 'catalog';
 const CATALOG_TTL = 60; // seconds
+
+/** A store row from the near-me $geoNear aggregation: the lean store fields plus
+ *  the straight-line `distanceMeters` the stage annotates each result with. */
+type NearbyStoreDoc = Record<string, unknown> & {
+  geo: { coordinates: [number, number] };
+  distanceMeters: number;
+};
 
 /** Build a GeoJSON point from a lat/lng pair, or null unless both are present. */
 function geoFromLatLng(
@@ -71,6 +76,7 @@ export class CatalogService implements OnModuleInit {
     private readonly cloudinaryService: CloudinaryService,
     private readonly platformService: PlatformService,
     private readonly cache: CacheService,
+    private readonly geocodingService: GeocodingService,
   ) {}
 
   async onModuleInit() {
@@ -138,15 +144,16 @@ export class CatalogService implements OnModuleInit {
       CATALOG_TTL,
       async () => {
         const pricing = await this.platformService.getDeliveryPricing();
-        // maxDistance is straight-line metres; the display distance/fee below add
-        // the road factor. Fall back to the platform max radius when unspecified.
+        // maxDistance pre-filters by straight-line metres (cheap DB-side bound);
+        // the display distance/fee below use real road distance. Fall back to the
+        // platform max radius when unspecified.
         const maxDistanceMeters = (radiusKm ?? pricing.maxRadiusKm) * 1000;
 
         const query: Record<string, any> = { isPlatform: { $ne: true } };
         if (category && category !== ('all' as any))
           query.categories = category;
 
-        const docs = await this.storeModel.aggregate([
+        const docs = await this.storeModel.aggregate<NearbyStoreDoc>([
           {
             $geoNear: {
               near: { type: 'Point', coordinates: [lng, lat] },
@@ -158,10 +165,25 @@ export class CatalogService implements OnModuleInit {
           },
         ]);
 
-        const items = docs.map((store: any) => {
-          const distanceKm =
-            (store.distanceMeters / 1000) * ROAD_DISTANCE_FACTOR;
-          const { distanceMeters, ...rest } = store;
+        // Real Google road distance from the customer to every store in ONE
+        // batched Routes call (cached per pair; falls back to a haversine
+        // estimate per store if Routes is down). $geoNear only returns stores
+        // that have `geo`, so every doc has coordinates to route to.
+        const origin: LngLat = [lng, lat];
+        const dests: LngLat[] = docs.map((store) => [
+          store.geo.coordinates[0],
+          store.geo.coordinates[1],
+        ]);
+        const routes = await this.geocodingService.routeDistancesFromOrigin(
+          origin,
+          dests,
+        );
+
+        const items = docs.map((store, i) => {
+          const distanceKm = routes[i].distanceKm;
+          // Drop the geoNear-only straight-line field; the real road distance
+          // computed above is what we surface.
+          const { distanceMeters: _straightLine, ...rest } = store;
           return {
             ...rest,
             distanceKm: Math.round(distanceKm * 10) / 10,

@@ -112,6 +112,13 @@ export default () => ({
         (process.env.GEOCODING_RESTRICT_TO_AREA ?? 'false') === 'true',
       regionCode: process.env.GEOCODING_REGION_CODE ?? 'ng',
       languageCode: process.env.GEOCODING_LANGUAGE_CODE ?? 'en',
+      // Real driving distance/ETA for delivery pricing (Google Routes API,
+      // separate from Places — enable "Routes API" in Google Cloud). DRIVE +
+      // TRAFFIC_UNAWARE is the cheapest tier and keeps fees stable/cacheable;
+      // switch to TRAFFIC_AWARE if you want live-traffic ETAs (costs more).
+      travelMode: process.env.GEOCODING_ROUTE_TRAVEL_MODE ?? 'DRIVE',
+      routingPreference:
+        process.env.GEOCODING_ROUTE_PREFERENCE ?? 'TRAFFIC_UNAWARE',
     },
     // Chowdeck's open place proxy — indexes grassroots local spots Google's
     // autocomplete misses, needs no API key. When selected as the provider,

@@ -24,6 +24,7 @@ import { ActivityService } from '../activity/activity.service';
 import { PlatformService } from '../platform/platform.service';
 import { ReferralService } from '../referral/referral.service';
 import { LandmarkService } from '../landmark/landmark.service';
+import { GeocodingService } from '../geocoding/geocoding.service';
 import {
   DeliveryMode,
   OrderStatus,
@@ -31,11 +32,7 @@ import {
   PaymentStatus,
 } from '../../common/enums/order-status.enum';
 import { paginate } from '../../common/dto/paginated-result.dto';
-import {
-  computeDeliveryFee,
-  roadDistanceKm,
-  LngLat,
-} from '../../common/geo/geo.util';
+import { computeDeliveryFee, LngLat } from '../../common/geo/geo.util';
 
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   [PaymentMethod.Card]: 'Card',
@@ -51,6 +48,22 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
 function computeServiceFee(subtotal: number): number {
   if (subtotal <= 0) return 0;
   return Math.min(500, Math.max(100, Math.round((subtotal * 0.05) / 50) * 50));
+}
+
+/**
+ * Estimated delivery window [low, high] in minutes: the store's kitchen-prep
+ * range plus the real Google driving time. When we have no driving estimate
+ * (order has no drop-off coordinates), we fall back to the store's own advertised
+ * range unchanged. Rounded to 5-minute steps for a clean "25–40 min" display.
+ */
+function estimateEtaWindow(
+  prepMins: number[] | undefined,
+  rideMin: number | null,
+): number[] {
+  const [prepLow, prepHigh] = prepMins?.length === 2 ? prepMins : [15, 30];
+  if (rideMin === null) return [prepLow, prepHigh];
+  const round5 = (n: number) => Math.round(n / 5) * 5;
+  return [round5(prepLow + rideMin), round5(prepHigh + rideMin)];
 }
 
 const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
@@ -75,6 +88,7 @@ export class OrdersService {
     private readonly platformService: PlatformService,
     private readonly referralService: ReferralService,
     private readonly landmarkService: LandmarkService,
+    private readonly geocodingService: GeocodingService,
   ) {}
 
   private async generateOrderCode() {
@@ -329,12 +343,21 @@ export class OrdersService {
     let deliveryFee: number;
     let deliveryGeo: { type: 'Point'; coordinates: number[] } | null = null;
     let deliveryDistanceKm: number | null = null;
+    let deliveryDurationMin: number | null = null;
     if (store.geo?.coordinates?.length === 2 && destPoint) {
       const origin: LngLat = [
         store.geo.coordinates[0],
         store.geo.coordinates[1],
       ];
-      deliveryDistanceKm = roadDistanceKm(origin, destPoint);
+      // Real Google road distance + driving time (falls back to a haversine
+      // estimate if the Routes API is unconfigured or down, so pricing never
+      // blocks; duration is null on the fallback path).
+      const route = await this.geocodingService.routeDistanceKm(
+        origin,
+        destPoint,
+      );
+      deliveryDistanceKm = route.distanceKm;
+      deliveryDurationMin = route.durationMin;
       const pricing = await this.platformService.getDeliveryPricing();
       const maxRadius =
         store.deliveryRadiusKm > 0
@@ -352,6 +375,10 @@ export class OrdersService {
     }
     const serviceFee = computeServiceFee(subtotal);
     const total = Math.max(0, subtotal - discount) + deliveryFee + serviceFee;
+    const estimatedDeliveryWindow = estimateEtaWindow(
+      store.deliveryTimeMins,
+      deliveryDurationMin,
+    );
 
     return {
       store,
@@ -363,6 +390,7 @@ export class OrdersService {
       deliveryFee,
       deliveryGeo,
       deliveryDistanceKm,
+      estimatedDeliveryWindow,
       landmarkName,
       serviceFee,
       total,
@@ -386,6 +414,7 @@ export class OrdersService {
         priced.deliveryDistanceKm === null
           ? null
           : Math.round(priced.deliveryDistanceKm * 10) / 10,
+      estimatedDeliveryWindow: priced.estimatedDeliveryWindow,
       minOrder: priced.store.minOrder,
       meetsMinimum: priced.subtotal >= priced.store.minOrder,
     };
@@ -407,6 +436,7 @@ export class OrdersService {
       deliveryFee,
       deliveryGeo,
       deliveryDistanceKm,
+      estimatedDeliveryWindow,
       landmarkName,
       serviceFee,
       total,
@@ -454,6 +484,7 @@ export class OrdersService {
         deliveryAddress,
         deliveryGeo,
         deliveryDistanceKm,
+        estimatedDeliveryWindow,
         notes: dto.notes ?? null,
         paymentMethod: dto.paymentMethod,
         paymentLabel: PAYMENT_LABELS[dto.paymentMethod],

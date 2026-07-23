@@ -266,9 +266,7 @@ export class GoogleGeocodingProvider implements GeocodingProvider {
     );
 
     const data = (await res.json().catch(() => null)) as
-      | RouteMatrixElement[]
-      | { error?: { message?: string } }
-      | null;
+      RouteMatrixElement[] | { error?: { message?: string } } | null;
 
     if (!res.ok || !Array.isArray(data)) {
       const message =
