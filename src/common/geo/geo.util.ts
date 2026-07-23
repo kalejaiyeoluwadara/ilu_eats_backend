@@ -32,6 +32,16 @@ export function roadDistanceKm(a: LngLat, b: LngLat): number {
   return haversineKm(a, b) * ROAD_DISTANCE_FACTOR;
 }
 
+/**
+ * One real routing result — actual driving distance and, when the provider
+ * gives it, the driving duration. Produced by a routing API (Google Routes);
+ * `roadDistanceKm` above is the fallback when no such result is available.
+ */
+export interface RouteMetric {
+  distanceKm: number;
+  durationMin: number | null;
+}
+
 export interface DeliveryPricing {
   baseFee: number;
   perKmFee: number;

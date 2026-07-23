@@ -8,6 +8,7 @@ import {
   PlaceDetails,
   PlaceSuggestion,
 } from './geocoding-provider.interface';
+import { LngLat, RouteMetric } from '../../../common/geo/geo.util';
 
 export interface GoogleGeocodingConfig {
   apiKey: string;
@@ -18,6 +19,14 @@ export interface GoogleGeocodingConfig {
   restrictToArea: boolean;
   regionCode: string;
   languageCode: string;
+  /** Routes API travel mode for delivery distance/ETA, e.g. DRIVE. */
+  travelMode: string;
+  /**
+   * Routes API routing preference. TRAFFIC_UNAWARE is the cheapest tier and
+   * gives stable, cache-friendly distances (delivery fees shouldn't swing with
+   * live traffic); TRAFFIC_AWARE costs more and is better for live ETAs.
+   */
+  routingPreference: string;
 }
 
 /**
@@ -38,6 +47,7 @@ export class GoogleGeocodingProvider implements GeocodingProvider {
   readonly name = 'google';
   private readonly logger = new Logger(GoogleGeocodingProvider.name);
   private readonly base = 'https://places.googleapis.com/v1';
+  private readonly routesBase = 'https://routes.googleapis.com';
 
   constructor(private readonly config: GoogleGeocodingConfig) {}
 
@@ -217,6 +227,77 @@ export class GoogleGeocodingProvider implements GeocodingProvider {
     };
   }
 
+  /**
+   * Real driving distance/duration between every origin and destination, via the
+   * Routes API `computeRouteMatrix` (one HTTP call for the whole grid — so a
+   * customer→N-stores lookup is a single request). Returns a row-major grid of
+   * `[origins][destinations]`; a cell is `null` when Google finds no route.
+   *
+   * Enable "Routes API" in Google Cloud — it's separate from Places/Geocoding.
+   * Docs: https://developers.google.com/maps/documentation/routes/compute_route_matrix
+   */
+  async routeMatrix(
+    origins: LngLat[],
+    destinations: LngLat[],
+  ): Promise<(RouteMetric | null)[][]> {
+    const toWaypoint = ([lng, lat]: LngLat) => ({
+      waypoint: { location: { latLng: { latitude: lat, longitude: lng } } },
+    });
+
+    const res = await fetch(
+      `${this.routesBase}/distanceMatrix/v2:computeRouteMatrix`,
+      {
+        method: 'POST',
+        headers: {
+          'X-Goog-Api-Key': this.config.apiKey,
+          'Content-Type': 'application/json',
+          // Field mask keeps the response (and billing) to just what pricing
+          // needs; without it the Routes API rejects the request.
+          'X-Goog-FieldMask':
+            'originIndex,destinationIndex,distanceMeters,duration,condition',
+        },
+        body: JSON.stringify({
+          origins: origins.map(toWaypoint),
+          destinations: destinations.map(toWaypoint),
+          travelMode: this.config.travelMode,
+          routingPreference: this.config.routingPreference,
+        }),
+      },
+    );
+
+    const data = (await res.json().catch(() => null)) as
+      | RouteMatrixElement[]
+      | { error?: { message?: string } }
+      | null;
+
+    if (!res.ok || !Array.isArray(data)) {
+      const message =
+        data && !Array.isArray(data) ? data.error?.message : undefined;
+      this.fail('Route Matrix', res.status, message);
+    }
+
+    // Seed a full null grid, then fill only the cells Google resolved a route
+    // for — missing/failed elements stay null so callers fall back per-pair.
+    const grid: (RouteMetric | null)[][] = origins.map(() =>
+      destinations.map(() => null),
+    );
+    for (const el of data) {
+      if (
+        el.condition !== 'ROUTE_EXISTS' ||
+        typeof el.distanceMeters !== 'number' ||
+        el.originIndex == null ||
+        el.destinationIndex == null
+      ) {
+        continue;
+      }
+      grid[el.originIndex][el.destinationIndex] = {
+        distanceKm: el.distanceMeters / 1000,
+        durationMin: parseDurationToMin(el.duration),
+      };
+    }
+    return grid;
+  }
+
   /** The service area as a circle, for autocomplete restriction/bias. */
   private areaCircle() {
     return {
@@ -344,4 +425,21 @@ interface GeocodeApiResponse {
     formatted_address?: string;
     geometry?: { location?: { lat: number; lng: number } };
   }[];
+}
+
+/** One element of a computeRouteMatrix response (a single origin→dest pair). */
+interface RouteMatrixElement {
+  originIndex?: number;
+  destinationIndex?: number;
+  distanceMeters?: number;
+  /** Protobuf duration string, e.g. "725s". */
+  duration?: string;
+  condition?: 'ROUTE_EXISTS' | 'ROUTE_NOT_FOUND';
+}
+
+/** Parse a Routes API duration ("725s") into whole minutes; null if malformed. */
+function parseDurationToMin(duration?: string): number | null {
+  if (!duration) return null;
+  const seconds = parseInt(duration.replace('s', ''), 10);
+  return Number.isFinite(seconds) ? Math.round(seconds / 60) : null;
 }

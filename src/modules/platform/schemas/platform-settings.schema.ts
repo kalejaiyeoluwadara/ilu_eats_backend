@@ -32,7 +32,7 @@ export class PlatformSettings {
   @Prop({ default: 300 })
   deliveryBaseFee: number;
 
-  @Prop({ default: 100 })
+  @Prop({ default: 200 })
   deliveryPerKmFee: number;
 
   @Prop({ default: 1 })
