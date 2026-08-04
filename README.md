@@ -84,8 +84,10 @@ npm run start:dev           # watch mode, http://localhost:3000
 
 ### Seed data
 
+The old catalog seed (`npm run seed`) has been removed — it upserted mock stores,
+products and banners straight over live data. Catalog content is managed from admin.
+
 ```bash
-npm run seed                # base seed
 npm run seed:landmarks      # landmark data
 ```
 
@@ -119,7 +121,7 @@ key empty to disable that channel cleanly rather than crash.
 | `npm run lint` | ESLint (autofix) |
 | `npm run format` | Prettier |
 | `npm run test` / `test:e2e` / `test:cov` | Jest unit / e2e / coverage |
-| `npm run seed` / `seed:landmarks` | Seed the database |
+| `npm run seed:landmarks` | Import landmark data |
 
 ---
 
