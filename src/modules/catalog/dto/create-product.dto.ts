@@ -54,6 +54,23 @@ export class CreateProductDto {
   @IsBoolean()
   isNew?: boolean;
 
+  /** Badge slugs. Multipart forms can't send arrays natively, so a
+   * comma-separated string ("combo,late-night") is accepted too. */
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value.map((v: unknown) => String(v));
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean);
+    }
+    return value;
+  })
+  @IsArray()
+  @IsString({ each: true })
+  badges?: string[];
+
   @IsOptional()
   @Type(() => Number)
   @IsNumber()

@@ -71,6 +71,12 @@ export class Product {
   @Prop({ default: false })
   isNew: boolean;
 
+  /** Badge slugs this item belongs to (see the Badge collection). Denormalised
+   * onto the product so a home badge group is one indexed query with no join;
+   * the Badge doc owns the label/emoji/ordering, this owns membership. */
+  @Prop({ type: [String], default: [], index: true })
+  badges: string[];
+
   @Prop({ default: 0 })
   rating: number;
 

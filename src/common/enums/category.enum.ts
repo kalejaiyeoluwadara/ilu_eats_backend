@@ -7,4 +7,5 @@ export enum CategoryId {
   Drinks = 'drinks',
   Shawarma = 'shawarma',
   Smoothies = 'smoothies',
+  Icecream = 'icecream',
 }

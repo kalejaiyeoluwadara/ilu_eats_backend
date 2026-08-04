@@ -22,6 +22,7 @@ import { ActivityService } from '../activity/activity.service';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
 import { PlatformService } from '../platform/platform.service';
 import { CacheService } from '../../common/redis/cache.service';
+import { CATALOG_NS } from '../../common/redis/cache-namespaces';
 import { computeDeliveryFee, LngLat } from '../../common/geo/geo.util';
 import { GeocodingService } from '../geocoding/geocoding.service';
 import { SearchType } from './dto/search.dto';
@@ -38,8 +39,9 @@ const PLATFORM_STORE_SLUG = 'ilueats-kitchen';
 /** All catalog reads share one cache namespace, so any store/product write
  * refreshes every listing at once. Menu edits are infrequent, so this coarse
  * invalidation costs little and sidesteps tracking cross-effects (slug renames
- * cascading to products, popularity toggles moving items in/out of featured). */
-const CATALOG_NS = 'catalog';
+ * cascading to products, popularity toggles moving items in/out of featured).
+ * BadgesService caches its home groups under the same namespace, so a menu edit
+ * refreshes those too. */
 const CATALOG_TTL = 60; // seconds
 
 /** A store row from the near-me $geoNear aggregation: the lean store fields plus
@@ -598,6 +600,7 @@ export class CatalogService implements OnModuleInit {
       category: src.category,
       isPopular: src.isPopular,
       isNew: src.isNew,
+      badges: src.badges,
       rating: src.rating,
       reviews: src.reviews,
       options: src.options,

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CatalogService } from '../catalog/catalog.service';
 import { BannersService } from '../banners/banners.service';
+import { BadgesService } from '../badges/badges.service';
 import { QueryStoresDto } from '../catalog/dto/query-stores.dto';
 
 /**
@@ -20,21 +21,28 @@ export class HomeService {
   constructor(
     private readonly catalogService: CatalogService,
     private readonly bannersService: BannersService,
+    private readonly badgesService: BadgesService,
   ) {}
 
   async getHomepage() {
-    const [stores, featured, banners] = await Promise.all([
+    const [stores, featured, banners, badgeGroups] = await Promise.all([
       // `{}` → all public (non-platform) stores; the client filters by category
       // locally, exactly as the standalone /stores listing did.
       this.catalogService.findStores(new QueryStoresDto()),
       this.catalogService.findFeaturedProducts(),
       this.bannersService.findAll(),
+      // Admin-curated groups (Combo, Late night, Five star…). These drive the
+      // dish rows on the feed; `featured` stays in the payload as the fallback
+      // for clients that predate badges and for a database with no badge
+      // membership yet.
+      this.badgesService.findHomeGroups(),
     ]);
 
     return {
       stores: stores.items,
       featured: featured.items,
       banners: banners.items,
+      badgeGroups: badgeGroups.items,
     };
   }
 }
