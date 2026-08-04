@@ -2,7 +2,6 @@ import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
-  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -10,7 +9,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { CategoryId } from '../../../common/enums/category.enum';
+import { IsCategorySlug } from '../../categories/validators/is-category-slug.validator';
 import { ProductOptionDto } from './product-option.dto';
 
 export class CreateProductDto {
@@ -37,8 +36,8 @@ export class CreateProductDto {
   @Min(0)
   oldPrice?: number;
 
-  @IsEnum(CategoryId)
-  category: CategoryId;
+  @IsCategorySlug()
+  category: string;
 
   @IsOptional()
   @IsString()

@@ -1,11 +1,12 @@
-import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CategoryId } from '../../../common/enums/category.enum';
 
 export class QueryStoresDto {
   @IsOptional()
-  @IsEnum(CategoryId)
-  category?: CategoryId;
+  // A filter, not a write: an unknown slug should return nothing rather than
+  // 400, so this stays a plain string check.
+  @IsString()
+  category?: string;
 
   @IsOptional()
   @Type(() => Boolean)

@@ -133,7 +133,7 @@ export class CatalogService implements OnModuleInit {
     lng: number,
     lat: number,
     radiusKm?: number,
-    category?: CategoryId,
+    category?: string,
   ) {
     // Bucket coordinates to ~3 decimals (~110m) so customers standing near each
     // other share a cache entry instead of each triggering their own $geoNear
@@ -216,7 +216,7 @@ export class CatalogService implements OnModuleInit {
     return store;
   }
 
-  async findProductsByStore(storeSlug: string, category?: CategoryId) {
+  async findProductsByStore(storeSlug: string, category?: string) {
     return this.cache.wrapVersioned(
       CATALOG_NS,
       `products:${storeSlug}:${category ?? 'all'}`,

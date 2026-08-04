@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
 import {
-  IsEnum,
   IsInt,
   IsMongoId,
   IsOptional,
@@ -8,7 +7,6 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import { CategoryId } from '../../../common/enums/category.enum';
 
 export class QueryAdminProductsDto {
   @IsOptional()
@@ -16,8 +14,8 @@ export class QueryAdminProductsDto {
   q?: string;
 
   @IsOptional()
-  @IsEnum(CategoryId)
-  category?: CategoryId;
+  @IsString()
+  category?: string;
 
   @IsOptional()
   @IsMongoId()

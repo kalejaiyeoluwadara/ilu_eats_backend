@@ -50,8 +50,19 @@ export class BadgesService implements OnModuleInit {
    */
   async onModuleInit() {
     try {
-      if ((await this.badgeModel.estimatedDocumentCount()) > 0) return;
-      await this.badgeModel.insertMany(DEFAULT_BADGES, { ordered: false });
+      if ((await this.badgeModel.estimatedDocumentCount()) === 0) {
+        await this.badgeModel.insertMany(DEFAULT_BADGES, { ordered: false });
+      } else {
+        // Backfill image paths on existing default badges if they don't have one set yet
+        for (const defaultBadge of DEFAULT_BADGES) {
+          if (defaultBadge.image) {
+            await this.badgeModel.updateOne(
+              { slug: defaultBadge.slug, $or: [{ image: '' }, { image: { $exists: false } }] },
+              { $set: { image: defaultBadge.image } },
+            );
+          }
+        }
+      }
       await Promise.all(
         LEGACY_FLAG_BADGES.map(({ flag, slug }) =>
           this.productModel.updateMany(
@@ -62,7 +73,7 @@ export class BadgesService implements OnModuleInit {
       );
       await this.cache.bumpVersion(CATALOG_NS);
       this.logger.log(
-        `Seeded ${DEFAULT_BADGES.length} badges and backfilled membership from isPopular/isNew`,
+        `Seeded/updated ${DEFAULT_BADGES.length} default badge illustrations and backfilled membership`,
       );
     } catch (err) {
       // Never block boot on this — the badges just stay empty and admin can

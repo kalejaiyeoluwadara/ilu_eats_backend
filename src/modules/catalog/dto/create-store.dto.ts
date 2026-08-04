@@ -2,7 +2,6 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
-  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -10,7 +9,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import { CategoryId } from '../../../common/enums/category.enum';
+import { IsCategorySlug } from '../../categories/validators/is-category-slug.validator';
 
 export class CreateStoreDto {
   @IsString()
@@ -62,8 +61,8 @@ export class CreateStoreDto {
 
   @IsOptional()
   @IsArray()
-  @IsEnum(CategoryId, { each: true })
-  categories?: CategoryId[];
+  @IsCategorySlug({ each: true })
+  categories?: string[];
 
   @IsOptional()
   @IsArray()

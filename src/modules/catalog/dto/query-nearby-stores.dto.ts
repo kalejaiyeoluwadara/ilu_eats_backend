@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsEnum, IsNumber, IsOptional, Max, Min } from 'class-validator';
-import { CategoryId } from '../../../common/enums/category.enum';
+import { IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class QueryNearbyStoresDto {
   @Type(() => Number)
@@ -22,6 +21,6 @@ export class QueryNearbyStoresDto {
   radiusKm?: number;
 
   @IsOptional()
-  @IsEnum(CategoryId)
-  category?: CategoryId;
+  @IsString()
+  category?: string;
 }

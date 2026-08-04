@@ -16,6 +16,7 @@ import { CartModule } from './modules/cart/cart.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { BannersModule } from './modules/banners/banners.module';
 import { BadgesModule } from './modules/badges/badges.module';
+import { CategoriesModule } from './modules/categories/categories.module';
 import { RiderModule } from './modules/rider/rider.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { PaymentsModule } from './modules/payments/payments.module';
@@ -84,6 +85,7 @@ import { GeocodingModule } from './modules/geocoding/geocoding.module';
     WalletModule,
     BannersModule,
     BadgesModule,
+    CategoriesModule,
     RiderModule,
     AdminModule,
     ReferralModule,

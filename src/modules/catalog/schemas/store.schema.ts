@@ -28,8 +28,10 @@ export class Store {
   @Prop({ default: '' })
   cover: string;
 
-  @Prop({ type: [String], enum: CategoryId, default: [] })
-  categories: CategoryId[];
+  /** Slugs of Category documents — see the note on Product.category for why
+   * this is no longer enum-constrained. */
+  @Prop({ type: [String], default: [] })
+  categories: string[];
 
   @Prop({ default: 0 })
   rating: number;

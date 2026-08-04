@@ -6,6 +6,8 @@ export enum UploadFolder {
   Stores = 'stores',
   Banners = 'banners',
   MenuItems = 'menu-items',
+  Badges = 'badges',
+  Categories = 'categories',
 }
 
 export class UploadImageDto {

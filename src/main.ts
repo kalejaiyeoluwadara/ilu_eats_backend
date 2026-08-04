@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
+import { useContainer } from 'class-validator';
 import helmet from 'helmet';
 import type { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
@@ -54,6 +55,12 @@ export async function createApp(): Promise<INestApplication> {
     }),
   );
   app.useGlobalInterceptors(new TransformMongoInterceptor());
+
+  // Lets class-validator constraints resolve providers, which is what allows
+  // @IsCategorySlug to check a submitted slug against the categories
+  // collection. `fallbackOnErrors` keeps validation working for the ordinary
+  // decorators if a constraint can't be resolved from the container.
+  useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
   return app;
 }

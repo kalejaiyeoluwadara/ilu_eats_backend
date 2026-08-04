@@ -3,7 +3,7 @@ import { CatalogService } from './catalog.service';
 import { QueryStoresDto } from './dto/query-stores.dto';
 import { QueryNearbyStoresDto } from './dto/query-nearby-stores.dto';
 import { SearchDto, SuggestDto } from './dto/search.dto';
-import { CategoryId } from '../../common/enums/category.enum';
+
 
 @Controller()
 export class CatalogController {
@@ -33,7 +33,7 @@ export class CatalogController {
   @Get('stores/:slug/products')
   findStoreProducts(
     @Param('slug') slug: string,
-    @Query('category') category?: CategoryId,
+    @Query('category') category?: string,
   ) {
     return this.catalogService.findProductsByStore(slug, category);
   }

@@ -31,10 +31,19 @@ export class Badge {
   @Prop({ default: '' })
   subtitle: string;
 
+  /**
+   * Illustration URL for the browse row on the home feed. This is what carries
+   * the badge's personality — the row's type stays uniform, so a real drawn
+   * icon reads as craft where a tinted pill reads as filler.
+   */
+  @Prop({ default: '' })
+  image: string;
+
+  /** Fallback mark when no illustration is uploaded yet. */
   @Prop({ default: '' })
   emoji: string;
 
-  /** Hex colour for the chip tint. Empty defers to the client's default. */
+  /** Hex colour, used only for the soft tile behind an emoji fallback. */
   @Prop({ default: '' })
   color: string;
 

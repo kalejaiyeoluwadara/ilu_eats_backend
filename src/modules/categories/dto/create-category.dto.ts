@@ -1,16 +1,12 @@
-import { Type } from 'class-transformer';
 import {
   IsBoolean,
-  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
-  Max,
-  Min,
 } from 'class-validator';
 
-export class CreateBadgeDto {
+export class CreateCategoryDto {
   @IsString()
   @IsNotEmpty({ message: 'label should not be empty' })
   label: string;
@@ -31,7 +27,7 @@ export class CreateBadgeDto {
   @IsString()
   subtitle?: string;
 
-  /** Hosted illustration URL (see POST /uploads/image with folder=badges). */
+  /** Hosted illustration URL (see POST /uploads/image with folder=categories). */
   @IsOptional()
   @IsString()
   image?: string;
@@ -54,11 +50,4 @@ export class CreateBadgeDto {
   @IsOptional()
   @IsBoolean()
   showOnHome?: boolean;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(50)
-  maxItems?: number;
 }

@@ -62,8 +62,15 @@ export class Product {
   @Prop({ default: '' })
   image: string;
 
-  @Prop({ required: true, enum: CategoryId })
-  category: CategoryId;
+  /**
+   * Slug of a Category document. Deliberately NOT `enum: CategoryId` any more
+   * — categories are admin-managed content now, so constraining this to the
+   * nine compiled-in values would make every newly created category
+   * unwritable until a redeploy. Validity is enforced against the categories
+   * collection at the DTO layer instead.
+   */
+  @Prop({ required: true, lowercase: true, trim: true })
+  category: string;
 
   @Prop({ default: false })
   isPopular: boolean;
