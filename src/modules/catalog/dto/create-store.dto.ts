@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -10,6 +11,7 @@ import {
   Min,
 } from 'class-validator';
 import { IsCategorySlug } from '../../categories/validators/is-category-slug.validator';
+import { StoreVertical } from '../../../common/enums/store-vertical.enum';
 
 export class CreateStoreDto {
   @IsString()
@@ -58,6 +60,10 @@ export class CreateStoreDto {
   @IsOptional()
   @IsString()
   cover?: string;
+
+  @IsOptional()
+  @IsEnum(StoreVertical)
+  vertical?: StoreVertical;
 
   @IsOptional()
   @IsArray()

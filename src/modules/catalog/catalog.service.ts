@@ -26,6 +26,7 @@ import { CATALOG_NS } from '../../common/redis/cache-namespaces';
 import { computeDeliveryFee, LngLat } from '../../common/geo/geo.util';
 import { GeocodingService } from '../geocoding/geocoding.service';
 import { SearchType } from './dto/search.dto';
+import { StoreVertical } from '../../common/enums/store-vertical.enum';
 import {
   PRODUCT_SEARCH_DEFINITION,
   PRODUCT_SEARCH_INDEX,
@@ -98,6 +99,14 @@ export class CatalogService implements OnModuleInit {
 
   async findStores(query: QueryStoresDto) {
     const filter: Record<string, any> = { isPlatform: { $ne: true } };
+    if (query.vertical) {
+      // Stores created before verticals existed have no field at all, and they
+      // were all restaurants — `$in: [..., null]` matches missing as well.
+      filter.vertical =
+        query.vertical === StoreVertical.Restaurant
+          ? { $in: [StoreVertical.Restaurant, null] }
+          : query.vertical;
+    }
     if (query.category && query.category !== ('all' as any)) {
       filter.categories = query.category;
     }
@@ -120,7 +129,7 @@ export class CatalogService implements OnModuleInit {
     // churns keys — only cache the shared, browse-by-category listings (the home
     // page and category tabs every user hits).
     if (query.q) return run();
-    const suffix = `stores:${query.category ?? 'all'}:${query.featured ?? 'any'}`;
+    const suffix = `stores:${query.vertical ?? 'any'}:${query.category ?? 'all'}:${query.featured ?? 'any'}`;
     return this.cache.wrapVersioned(CATALOG_NS, suffix, CATALOG_TTL, run);
   }
 
@@ -518,6 +527,16 @@ export class CatalogService implements OnModuleInit {
    * House store that owns standalone items sold directly by the platform.
    * Created on demand; hidden from public store listings.
    */
+  /**
+   * The house store as the storefront reads it: never created on demand, so an
+   * install that has no standalone items yet simply has no ìlúStore page.
+   */
+  async findPlatformStore() {
+    const store = await this.storeModel.findOne({ isPlatform: true }).lean();
+    if (!store) throw new NotFoundException('Store not found');
+    return store;
+  }
+
   async ensurePlatformStore() {
     const existing = await this.storeModel.findOne({ isPlatform: true });
     if (existing) return existing.toObject();

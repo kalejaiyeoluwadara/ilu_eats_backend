@@ -14,6 +14,13 @@ export class CatalogController {
     return this.catalogService.findStores(query);
   }
 
+  // Public read of the house store so the storefront can resolve its slug
+  // without hardcoding it. Creation stays admin-only (POST /platform-store).
+  @Get('platform-store')
+  findPlatformStore() {
+    return this.catalogService.findPlatformStore();
+  }
+
   // Must be declared before 'stores/:slug' so "near" isn't captured as a slug.
   @Get('stores/near')
   findStoresNear(@Query() query: QueryNearbyStoresDto) {

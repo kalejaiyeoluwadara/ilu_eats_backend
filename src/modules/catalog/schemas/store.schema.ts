@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { CategoryId } from '../../../common/enums/category.enum';
+import { StoreVertical } from '../../../common/enums/store-vertical.enum';
 import {
   GeoPoint,
   GeoPointSchema,
@@ -27,6 +27,16 @@ export class Store {
 
   @Prop({ default: '' })
   cover: string;
+
+  /** Which browse page this store lives on. Existing stores predate the field
+   * and default to restaurants, which is what they all were. */
+  @Prop({
+    type: String,
+    enum: Object.values(StoreVertical),
+    default: StoreVertical.Restaurant,
+    index: true,
+  })
+  vertical: StoreVertical;
 
   /** Slugs of Category documents — see the note on Product.category for why
    * this is no longer enum-constrained. */
