@@ -32,6 +32,19 @@ export class CatalogController {
     );
   }
 
+  // Also before 'stores/:slug'. Lets a page resolve the handful of stores it
+  // actually references (cart, favourites) in one request instead of pulling
+  // the whole catalog to look two of them up.
+  @Get('stores/by-slugs')
+  async findStoresBySlugs(@Query('slugs') slugs?: string) {
+    const items = slugs
+      ? await this.catalogService.findStoresBySlugs(
+          slugs.split(',').filter(Boolean),
+        )
+      : [];
+    return { items };
+  }
+
   @Get('stores/:slug')
   findStore(@Param('slug') slug: string) {
     return this.catalogService.findStoreBySlug(slug);

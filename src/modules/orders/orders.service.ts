@@ -114,6 +114,9 @@ export class OrdersService {
       deliveryFee: order.deliveryFee,
       serviceFee: order.serviceFee,
       total: order.total,
+      // The slug rides along so an order list can resolve its stores in one
+      // lookup rather than matching them by name against the whole catalog.
+      storeSlug: order.storeSlug,
       storeName: order.storeName,
       placedAt: order.placedAt,
     };

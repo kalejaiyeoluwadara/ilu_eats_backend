@@ -117,19 +117,26 @@ export class CatalogService implements OnModuleInit {
       filter.$text = { $search: query.q };
     }
 
+    const skip = query.skip ?? 0;
+
     const run = async () => {
-      const items = await this.storeModel
-        .find(filter)
-        .sort({ createdAt: -1 })
-        .lean();
-      return { items };
+      // Paged callers get a total so the client knows whether to offer "load
+      // more"; unpaged ones skip the extra count entirely.
+      const cursor = this.storeModel.find(filter).sort({ createdAt: -1 });
+      if (skip) cursor.skip(skip);
+      if (query.limit) cursor.limit(query.limit);
+      const items = await cursor.lean();
+
+      if (!query.limit) return { items, total: items.length, hasMore: false };
+      const total = await this.storeModel.countDocuments(filter);
+      return { items, total, hasMore: skip + items.length < total };
     };
 
     // Text searches are high-cardinality and rarely repeat, so caching them just
     // churns keys — only cache the shared, browse-by-category listings (the home
     // page and category tabs every user hits).
     if (query.q) return run();
-    const suffix = `stores:${query.vertical ?? 'any'}:${query.category ?? 'all'}:${query.featured ?? 'any'}`;
+    const suffix = `stores:${query.vertical ?? 'any'}:${query.category ?? 'all'}:${query.featured ?? 'any'}:${query.limit ?? 'all'}:${skip}`;
     return this.cache.wrapVersioned(CATALOG_NS, suffix, CATALOG_TTL, run);
   }
 
@@ -217,6 +224,12 @@ export class CatalogService implements OnModuleInit {
         return store;
       },
     );
+  }
+
+  /** Stores for a known set of slugs — unknown slugs are simply absent. */
+  async findStoresBySlugs(slugs: string[]) {
+    if (!slugs.length) return [];
+    return this.storeModel.find({ slug: { $in: slugs } }).lean();
   }
 
   async findStoreOrThrow(id: string) {
