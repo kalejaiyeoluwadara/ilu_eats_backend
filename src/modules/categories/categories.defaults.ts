@@ -1,8 +1,8 @@
 import { CategoryId } from '../../common/enums/category.enum';
 
 /**
- * The categories a database starts with — exactly the nine that used to be
- * hardcoded in the `CategoryId` enum, so existing products and stores keep
+ * The food categories a database starts with — exactly the nine that used to
+ * be hardcoded in the `CategoryId` enum, so existing products and stores keep
  * resolving after the migration. Slugs here MUST match the old enum values.
  *
  * Everything below is editable and deletable from admin afterwards. The enum
@@ -10,7 +10,7 @@ import { CategoryId } from '../../common/enums/category.enum';
  * to the starter set in code (see the `CategoryId.Snacks` fallback in
  * CatalogService); it is no longer a constraint on what may exist.
  */
-export const DEFAULT_CATEGORIES = [
+const FOOD_CATEGORIES = [
   {
     slug: CategoryId.Local,
     label: 'Local',
@@ -93,3 +93,112 @@ export const DEFAULT_CATEGORIES = [
     order: 8,
   },
 ];
+
+/**
+ * The non-food categories the storefront's /shops filters ask for. These are
+ * the slugs the shops page pills and icon rail send, so a shop can only be
+ * filtered into one of them if the matching category row exists — that is what
+ * these seed.
+ *
+ * They live here rather than in the enum because nothing legacy references
+ * them; they are ordinary editable rows that simply ship in the box.
+ */
+const SHOP_CATEGORIES = [
+  {
+    slug: 'supermarket',
+    label: 'Supermarkets',
+    title: 'Supermarkets',
+    subtitle: 'Aisles of everything, delivered',
+    emoji: '🏬',
+    color: '#2563EB',
+    order: 9,
+    showOnHome: false,
+  },
+  {
+    slug: 'mini-marts',
+    label: 'Mini Marts',
+    title: 'Mini marts',
+    subtitle: 'The corner shop, on demand',
+    emoji: '🛒',
+    color: '#0EA5E9',
+    order: 10,
+    showOnHome: false,
+  },
+  {
+    slug: 'groceries',
+    label: 'Groceries',
+    title: 'Groceries',
+    subtitle: 'Provisions and everyday staples',
+    emoji: '🧺',
+    color: '#16A34A',
+    order: 11,
+    showOnHome: false,
+  },
+  {
+    slug: 'bakery',
+    label: 'Bakery',
+    title: 'Fresh from the oven',
+    subtitle: 'Bread, rolls and pastries',
+    emoji: '🍞',
+    color: '#C2853B',
+    order: 12,
+    showOnHome: false,
+  },
+  {
+    slug: 'fruits',
+    label: 'Fruits',
+    title: 'Fruits & veg',
+    subtitle: 'Picked fresh, delivered fresh',
+    emoji: '🍌',
+    color: '#F59E0B',
+    order: 13,
+    showOnHome: false,
+  },
+  {
+    slug: 'frozen',
+    label: 'Frozen Food',
+    title: 'Frozen food',
+    subtitle: 'Proteins and freezer staples',
+    emoji: '🧊',
+    color: '#38BDF8',
+    order: 14,
+    showOnHome: false,
+  },
+  {
+    slug: 'alcohol',
+    label: 'Alcohol',
+    title: 'Drinks cabinet',
+    subtitle: 'Beer, wine and spirits',
+    emoji: '🍾',
+    color: '#7C3AED',
+    order: 15,
+    showOnHome: false,
+  },
+  {
+    slug: 'cleaning',
+    label: 'Cleaning',
+    title: 'Home & cleaning',
+    subtitle: 'Detergents, soaps and household bits',
+    emoji: '🧴',
+    color: '#14B8A6',
+    order: 16,
+    showOnHome: false,
+  },
+  {
+    slug: 'electronics',
+    label: 'Electronics',
+    title: 'Electronics',
+    subtitle: 'Gadgets, chargers and accessories',
+    emoji: '📱',
+    color: '#475569',
+    order: 17,
+    showOnHome: false,
+  },
+];
+
+/** Everything a fresh database starts with. */
+export const DEFAULT_CATEGORIES = [...FOOD_CATEGORIES, ...SHOP_CATEGORIES];
+
+/** Exported for the top-up script, which adds only the missing shop rows to a
+ * database that was already seeded with the food set. */
+export { FOOD_CATEGORIES, SHOP_CATEGORIES };

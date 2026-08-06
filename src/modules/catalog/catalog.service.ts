@@ -497,7 +497,10 @@ export class CatalogService implements OnModuleInit {
     const store = await this.storeModel.create({
       ...dto,
       slug,
-      categories: dto.categories?.length ? dto.categories : [CategoryId.Snacks],
+      // No fallback: a shop or pharmacy left uncategorised should stay
+      // uncategorised rather than be filed under a food category it has
+      // nothing to do with. It simply matches no browse filter until tagged.
+      categories: dto.categories ?? [],
       ...(geo ? { geo } : {}),
     });
     await this.cache.bumpVersion(CATALOG_NS);
