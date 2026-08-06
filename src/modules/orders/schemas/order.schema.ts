@@ -133,8 +133,14 @@ export class Order {
   @Prop({ default: null, type: String })
   referralCode: string | null;
 
+  @Prop({ default: null, type: String })
+  promoCode: string | null;
+
   @Prop({ default: 0 })
   discount: number;
+
+  @Prop({ default: false })
+  isFreeDelivery: boolean;
 
   @Prop({ required: true })
   deliveryFee: number;

@@ -25,6 +25,7 @@ import { PlatformService } from '../platform/platform.service';
 import { ReferralService } from '../referral/referral.service';
 import { LandmarkService } from '../landmark/landmark.service';
 import { GeocodingService } from '../geocoding/geocoding.service';
+import { PromosService } from '../promos/promos.service';
 import {
   DeliveryMode,
   OrderStatus,
@@ -89,6 +90,7 @@ export class OrdersService {
     private readonly referralService: ReferralService,
     private readonly landmarkService: LandmarkService,
     private readonly geocodingService: GeocodingService,
+    private readonly promosService: PromosService,
   ) {}
 
   private async generateOrderCode() {
@@ -318,6 +320,26 @@ export class OrdersService {
       discount = resolved.discount;
     }
 
+    // Resolve promo code if supplied
+    let promoCode: string | null = null;
+    let isFreeDelivery = false;
+    if (dto.promoCode?.trim()) {
+      const validated = await this.promosService.validatePromo({
+        code: dto.promoCode,
+        subtotal,
+        deliveryFee: store.deliveryFee,
+        storeId: store._id.toString(),
+      });
+      if (validated.valid) {
+        promoCode = validated.code;
+        if (validated.freeDelivery) {
+          isFreeDelivery = true;
+        } else {
+          discount += validated.discountAmount;
+        }
+      }
+    }
+
     // Resolve the delivery drop-off point. For landmark orders that's the
     // admin-managed landmark's coordinates; for door orders it's the app's map
     // pin. Either can be missing — then we fall back to the flat store fee.
@@ -379,6 +401,11 @@ export class OrdersService {
     } else {
       deliveryFee = store.deliveryFee;
     }
+
+    if (isFreeDelivery) {
+      deliveryFee = 0;
+    }
+
     const serviceFee = computeServiceFee(subtotal);
     const total = Math.max(0, subtotal - discount) + deliveryFee + serviceFee;
     const estimatedDeliveryWindow = estimateEtaWindow(
@@ -401,6 +428,8 @@ export class OrdersService {
       landmarkName,
       serviceFee,
       total,
+      promoCode,
+      isFreeDelivery,
     };
   }
 
@@ -448,6 +477,8 @@ export class OrdersService {
       landmarkName,
       serviceFee,
       total,
+      promoCode,
+      isFreeDelivery,
     } = await this.priceOrder(userId, dto);
 
     if (subtotal < store.minOrder) {
@@ -506,13 +537,19 @@ export class OrdersService {
         lineItems,
         subtotal,
         referralCode,
+        promoCode,
         discount,
+        isFreeDelivery,
         deliveryFee,
         serviceFee,
         total,
         status: OrderStatus.New,
         placedAt: new Date(),
       });
+
+      if (promoCode) {
+        await this.promosService.incrementUsage(promoCode);
+      }
     } catch (err) {
       if (walletPayment) {
         await this.walletService.creditRefund(userId, orderCode, total);

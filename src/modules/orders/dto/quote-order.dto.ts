@@ -72,4 +72,8 @@ export class QuoteOrderDto {
   @IsOptional()
   @IsString()
   referralCode?: string;
+
+  @IsOptional()
+  @IsString()
+  promoCode?: string;
 }

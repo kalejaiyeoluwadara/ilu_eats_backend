@@ -29,6 +29,7 @@ import { LandmarkModule } from './modules/landmark/landmark.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { HomeModule } from './modules/home/home.module';
 import { GeocodingModule } from './modules/geocoding/geocoding.module';
+import { PromosModule } from './modules/promos/promos.module';
 
 @Module({
   imports: [
@@ -95,6 +96,7 @@ import { GeocodingModule } from './modules/geocoding/geocoding.module';
     UploadsModule,
     HomeModule,
     GeocodingModule,
+    PromosModule,
   ],
   controllers: [AppController],
   // Bind the throttler globally so the configured limit is actually enforced on
