@@ -196,9 +196,135 @@ const SHOP_CATEGORIES = [
   },
 ];
 
-/** Everything a fresh database starts with. */
-export const DEFAULT_CATEGORIES = [...FOOD_CATEGORIES, ...SHOP_CATEGORIES];
+/**
+ * What farms and local markets sell. The food set above describes cooked
+ * plates, which leaves raw produce with nowhere to go — every farm item in the
+ * catalog currently sits under `local` alongside jollof rice.
+ */
+const PRODUCE_CATEGORIES = [
+  {
+    slug: 'livestock',
+    label: 'Livestock',
+    title: 'Livestock',
+    subtitle: 'Live chickens, goats, rams and cattle',
+    emoji: '🐐',
+    color: '#92400E',
+    order: 18,
+    showOnHome: false,
+  },
+  {
+    slug: 'crop',
+    label: 'Crops',
+    title: 'Crops & tubers',
+    subtitle: 'Yam, cassava, maize, beans and grains',
+    emoji: '🌽',
+    color: '#A16207',
+    order: 19,
+    showOnHome: false,
+  },
+  {
+    slug: 'eggs-dairy',
+    label: 'Eggs & Dairy',
+    title: 'Eggs & dairy',
+    subtitle: 'Crates of eggs, milk and yoghurt',
+    emoji: '🥚',
+    color: '#D97706',
+    order: 20,
+    showOnHome: false,
+  },
+  {
+    slug: 'vegetables',
+    label: 'Vegetables',
+    title: 'Vegetables',
+    subtitle: 'Ugu, tomatoes, peppers and greens',
+    emoji: '🥬',
+    color: '#15803D',
+    order: 21,
+    showOnHome: false,
+  },
+  {
+    slug: 'fish-seafood',
+    label: 'Fish & Seafood',
+    title: 'Fish & seafood',
+    subtitle: 'Fresh catfish, tilapia, prawns and dried fish',
+    emoji: '🐟',
+    color: '#0369A1',
+    order: 22,
+    showOnHome: false,
+  },
+  {
+    slug: 'meat',
+    label: 'Meat',
+    title: 'Meat & poultry',
+    subtitle: 'Beef, goat meat, chicken and turkey by the cut',
+    emoji: '🥩',
+    color: '#9F1239',
+    order: 23,
+    showOnHome: false,
+  },
+  {
+    slug: 'foodstuff',
+    label: 'Foodstuff',
+    title: 'Market foodstuff',
+    subtitle: 'Rice, garri, palm oil, spices and staples',
+    emoji: '🍚',
+    color: '#B45309',
+    order: 24,
+    showOnHome: false,
+  },
+];
 
-/** Exported for the top-up script, which adds only the missing shop rows to a
- * database that was already seeded with the food set. */
-export { FOOD_CATEGORIES, SHOP_CATEGORIES };
+/**
+ * The pharmacy and herbal verticals. Neither had a category of its own, so a
+ * store on those pages had nothing meaningful to be tagged with.
+ */
+const CARE_CATEGORIES = [
+  {
+    slug: 'medicine',
+    label: 'Medicine',
+    title: 'Medicine',
+    subtitle: 'Prescriptions, pain relief and first aid',
+    emoji: '💊',
+    color: '#DC2626',
+    order: 25,
+    showOnHome: false,
+  },
+  {
+    slug: 'personal-care',
+    label: 'Personal Care',
+    title: 'Personal care',
+    subtitle: 'Toiletries, skincare and hygiene',
+    emoji: '🧼',
+    color: '#DB2777',
+    order: 26,
+    showOnHome: false,
+  },
+  {
+    slug: 'herbal',
+    label: 'Herbal',
+    title: 'Herbs & alagbo',
+    subtitle: 'Traditional roots, barks and natural remedies',
+    emoji: '🌿',
+    color: '#166534',
+    order: 27,
+    showOnHome: false,
+  },
+];
+
+/** Everything a fresh database starts with. */
+export const DEFAULT_CATEGORIES = [
+  ...FOOD_CATEGORIES,
+  ...SHOP_CATEGORIES,
+  ...PRODUCE_CATEGORIES,
+  ...CARE_CATEGORIES,
+];
+
+/** Exported for the top-up script, which adds whichever default rows a live
+ * database is missing — boot-time seeding only fires on an empty collection, so
+ * categories shipped after launch never reach an existing install otherwise. */
+export {
+  FOOD_CATEGORIES,
+  SHOP_CATEGORIES,
+  PRODUCE_CATEGORIES,
+  CARE_CATEGORIES,
+};

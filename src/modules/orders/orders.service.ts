@@ -347,6 +347,8 @@ export class OrdersService {
     let deliveryGeo: { type: 'Point'; coordinates: number[] } | null = null;
     let deliveryDistanceKm: number | null = null;
     let deliveryDurationMin: number | null = null;
+    /** The radius this order was priced against — lets clients judge "far". */
+    let deliveryMaxRadiusKm: number | null = null;
     if (store.geo?.coordinates?.length === 2 && destPoint) {
       const origin: LngLat = [
         store.geo.coordinates[0],
@@ -366,6 +368,7 @@ export class OrdersService {
         store.deliveryRadiusKm > 0
           ? Math.min(store.deliveryRadiusKm, pricing.maxRadiusKm)
           : pricing.maxRadiusKm;
+      deliveryMaxRadiusKm = maxRadius;
       if (deliveryDistanceKm > maxRadius) {
         throw new BadRequestException(
           `${store.name} doesn't deliver that far — you're about ${deliveryDistanceKm.toFixed(1)}km away (max ${maxRadius}km).`,
@@ -393,6 +396,7 @@ export class OrdersService {
       deliveryFee,
       deliveryGeo,
       deliveryDistanceKm,
+      deliveryMaxRadiusKm,
       estimatedDeliveryWindow,
       landmarkName,
       serviceFee,
@@ -417,6 +421,7 @@ export class OrdersService {
         priced.deliveryDistanceKm === null
           ? null
           : Math.round(priced.deliveryDistanceKm * 10) / 10,
+      deliveryMaxRadiusKm: priced.deliveryMaxRadiusKm,
       estimatedDeliveryWindow: priced.estimatedDeliveryWindow,
       minOrder: priced.store.minOrder,
       meetsMinimum: priced.subtotal >= priced.store.minOrder,
