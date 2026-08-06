@@ -12,4 +12,5 @@ export enum StoreVertical {
   Shop = 'shop',
   Pharmacy = 'pharmacy',
   Market = 'market',
+  Herbal = 'herbal',
 }
