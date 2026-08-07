@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Role } from '../../../common/enums/role.enum';
+import { AuthProvider } from '../../../common/enums/auth-provider.enum';
 import { Address, AddressSchema } from './address.schema';
 
 @Schema({ timestamps: true })
@@ -21,6 +22,22 @@ export class User {
 
   @Prop({ required: true, enum: Role, default: Role.Customer })
   role: Role;
+
+  /** How the account was first created. Google accounts get a throwaway password hash. */
+  @Prop({
+    required: true,
+    enum: AuthProvider,
+    default: AuthProvider.Local,
+  })
+  authProvider: AuthProvider;
+
+  /**
+   * False for Google accounts until the owner sets a password of their own (via
+   * the reset flow). Sign-in checks this so we can tell them to use Google
+   * instead of failing with a bogus "incorrect password".
+   */
+  @Prop({ default: true })
+  hasPassword: boolean;
 
   /** When true the account is barred: its credentials/token are rejected at auth time. */
   @Prop({ default: false })

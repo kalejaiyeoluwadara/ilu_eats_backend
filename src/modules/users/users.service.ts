@@ -8,6 +8,8 @@ import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from './schemas/user.schema';
 import { Role } from '../../common/enums/role.enum';
+import { AuthProvider } from '../../common/enums/auth-provider.enum';
+import { GOOGLE_ACCOUNT_CODE } from '../../common/enums/auth-error-code.enum';
 import { paginate } from '../../common/dto/paginated-result.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateAddressDto } from './dto/create-address.dto';
@@ -58,13 +60,24 @@ export class UsersService {
 
   async createCustomer(name: string, email: string, password: string) {
     const existing = await this.findByEmail(email);
-    if (existing) throw new ConflictException('Email already registered');
+    if (existing) {
+      if (existing.authProvider === AuthProvider.Google) {
+        throw new ConflictException({
+          code: GOOGLE_ACCOUNT_CODE,
+          message:
+            'You already have an ìlúEats account created with Google. Continue with Google to sign in.',
+        });
+      }
+      throw new ConflictException('Email already registered');
+    }
     const passwordHash = await bcrypt.hash(password, 10);
     return this.userModel.create({
       name,
       email,
       passwordHash,
       role: Role.Customer,
+      authProvider: AuthProvider.Local,
+      hasPassword: true,
     });
   }
 
@@ -93,7 +106,7 @@ export class UsersService {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await this.userModel.findByIdAndUpdate(
       userId,
-      { passwordHash },
+      { passwordHash, hasPassword: true },
       { new: true },
     );
     if (!user) throw new NotFoundException('User not found');
@@ -110,6 +123,8 @@ export class UsersService {
         email: email.toLowerCase().trim(),
         passwordHash,
         role: Role.Customer,
+        authProvider: AuthProvider.Google,
+        hasPassword: false,
       });
       isNew = true;
     }
@@ -153,6 +168,9 @@ export class UsersService {
       userId,
       {
         passwordHash,
+        // A Google account that completes a reset now has a password of its own,
+        // so credentials sign-in should stop redirecting them to Google.
+        hasPassword: true,
         passwordResetTokenHash: null,
         passwordResetExpires: null,
       },

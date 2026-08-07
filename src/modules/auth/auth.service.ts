@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -12,6 +13,8 @@ import { MailService } from '../mail/mail.service';
 import { SignupDto } from './dto/signup.dto';
 import { SigninDto } from './dto/signin.dto';
 import { UserDocument } from '../users/schemas/user.schema';
+import { AuthProvider } from '../../common/enums/auth-provider.enum';
+import { GOOGLE_ACCOUNT_CODE } from '../../common/enums/auth-error-code.enum';
 
 /** Password-reset links stay valid for this long after being requested. */
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -66,6 +69,16 @@ export class AuthService {
       throw new NotFoundException(
         "We couldn't find an ìlúEats account with this email. Please check the address or create an account.",
       );
+    }
+
+    // Google accounts carry a throwaway password hash, so checking it would fail
+    // with a misleading "incorrect password". Tell them where their account lives.
+    if (user.authProvider === AuthProvider.Google && !user.hasPassword) {
+      throw new ConflictException({
+        code: GOOGLE_ACCOUNT_CODE,
+        message:
+          'You created your ìlúEats account with Google. Continue with Google to sign in.',
+      });
     }
 
     const matches = await this.usersService.verifyPassword(user, dto.password);
