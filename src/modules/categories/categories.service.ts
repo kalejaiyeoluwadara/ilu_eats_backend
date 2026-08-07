@@ -8,7 +8,11 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Category, CategoryDocument } from './schemas/category.schema';
-import { Product, ProductDocument } from '../catalog/schemas/product.schema';
+import {
+  Product,
+  ProductDocument,
+  VISIBLE_PRODUCT_FILTER,
+} from '../catalog/schemas/product.schema';
 import { Store, StoreDocument } from '../catalog/schemas/store.schema';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -23,7 +27,7 @@ const CATEGORIES_TTL = 300; // seconds — categories change far less than menus
 
 /** Trimmed product payload for category listings, matching the badge groups. */
 const GROUP_PRODUCT_FIELDS =
-  'name slug storeSlug storeId image price oldPrice rating reviews category badges';
+  'name slug storeSlug storeId image price oldPrice rating reviews category badges isHidden';
 
 @Injectable()
 export class CategoriesService implements OnModuleInit {
@@ -121,6 +125,9 @@ export class CategoriesService implements OnModuleInit {
     page = 1,
     pageSize = 20,
     search?: string,
+    /** Admin callers pass true — the public "see all" page must not leak items
+     * an admin has hidden. */
+    includeHidden = false,
   ) {
     const category = await this.categoryModel.findOne({ slug }).lean();
     if (!category) throw new NotFoundException('Category not found');
@@ -128,7 +135,10 @@ export class CategoriesService implements OnModuleInit {
     const size = Math.min(Math.max(pageSize, 1), 50);
     const current = Math.max(page, 1);
 
-    const filter: Record<string, unknown> = { category: slug };
+    const filter: Record<string, unknown> = {
+      category: slug,
+      ...(includeHidden ? {} : VISIBLE_PRODUCT_FILTER),
+    };
     if (search?.trim()) {
       // Escaped so an admin typing "50% off" can't blow up the query.
       filter.name = {

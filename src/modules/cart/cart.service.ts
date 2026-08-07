@@ -71,6 +71,11 @@ export class CartService {
   async addItem(userId: string, dto: AddCartItemDto) {
     const cart = await this.getOrCreateCart(userId);
     const product = await this.catalogService.getProductDocById(dto.productId);
+    // The item may have been hidden while it sat on the menu page in front of
+    // the customer; keep it out of the cart rather than failing at checkout.
+    if (product.isHidden) {
+      throw new NotFoundException('This item is no longer available');
+    }
     const store = await this.catalogService.getStoreDocById(
       product.storeId.toString(),
     );

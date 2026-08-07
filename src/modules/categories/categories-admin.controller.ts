@@ -43,6 +43,7 @@ export class CategoriesAdminController {
       query.page,
       query.pageSize,
       query.search,
+      true,
     );
   }
 

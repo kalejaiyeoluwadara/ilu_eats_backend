@@ -72,6 +72,14 @@ export class Product {
   @Prop({ required: true, lowercase: true, trim: true })
   category: string;
 
+  /** Admin kill-switch for a single item: hidden items stay in the database
+   * (and on past orders) but are filtered out of every customer-facing read —
+   * listings, search, badges, categories, favourites — and can't be added to a
+   * cart or ordered. Missing on documents written before this existed, so all
+   * public filters test `$ne: true` rather than `false`. */
+  @Prop({ default: false, index: true })
+  isHidden: boolean;
+
   @Prop({ default: false })
   isPopular: boolean;
 
@@ -93,6 +101,11 @@ export class Product {
   @Prop({ type: [ProductOptionSchema], default: [] })
   options: ProductOption[];
 }
+
+/** Scope for every customer-facing product read. `$ne: true` rather than
+ * `false` because items written before `isHidden` existed have no field at
+ * all, and those must stay visible. */
+export const VISIBLE_PRODUCT_FILTER = { isHidden: { $ne: true } } as const;
 
 export type ProductDocument = Product & Document;
 export const ProductSchema = SchemaFactory.createForClass(Product);

@@ -1,5 +1,6 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsInt,
   IsMongoId,
   IsOptional,
@@ -12,6 +13,13 @@ export class QueryAdminProductsDto {
   @IsOptional()
   @IsString()
   q?: string;
+
+  /** Narrow the list to hidden (`true`) or visible (`false`) items; omitted
+   * shows both, which is what the admin menu list wants by default. */
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  hidden?: boolean;
 
   @IsOptional()
   @IsString()

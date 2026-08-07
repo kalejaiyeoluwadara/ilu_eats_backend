@@ -11,6 +11,7 @@ import { Badge, BadgeDocument } from './schemas/badge.schema';
 import {
   Product,
   ProductDocument,
+  VISIBLE_PRODUCT_FILTER,
 } from '../catalog/schemas/product.schema';
 import { CreateBadgeDto } from './dto/create-badge.dto';
 import { UpdateBadgeDto } from './dto/update-badge.dto';
@@ -145,7 +146,7 @@ export class BadgesService implements OnModuleInit {
           badges.map(async (badge) => ({
             badge,
             items: await this.productModel
-              .find({ badges: badge.slug })
+              .find({ badges: badge.slug, ...VISIBLE_PRODUCT_FILTER })
               .select(GROUP_PRODUCT_FIELDS)
               .sort({ rating: -1, createdAt: -1 })
               .limit(Math.max(badge.maxItems || 12, 1))
@@ -166,12 +167,15 @@ export class BadgesService implements OnModuleInit {
     const current = Math.max(page, 1);
     const [items, totalItems] = await Promise.all([
       this.productModel
-        .find({ badges: slug })
+        .find({ badges: slug, ...VISIBLE_PRODUCT_FILTER })
         .sort({ rating: -1, createdAt: -1 })
         .skip((current - 1) * size)
         .limit(size)
         .lean(),
-      this.productModel.countDocuments({ badges: slug }),
+      this.productModel.countDocuments({
+        badges: slug,
+        ...VISIBLE_PRODUCT_FILTER,
+      }),
     ]);
     return { badge, ...paginate(items, totalItems, current, size) };
   }

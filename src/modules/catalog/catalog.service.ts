@@ -8,7 +8,11 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Store, StoreDocument } from './schemas/store.schema';
-import { Product, ProductDocument } from './schemas/product.schema';
+import {
+  Product,
+  ProductDocument,
+  VISIBLE_PRODUCT_FILTER,
+} from './schemas/product.schema';
 import { QueryStoresDto } from './dto/query-stores.dto';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
@@ -246,7 +250,10 @@ export class CatalogService implements OnModuleInit {
       async () => {
         const store = await this.storeModel.findOne({ slug: storeSlug }).lean();
         if (!store) throw new NotFoundException('Store not found');
-        const filter: Record<string, any> = { storeId: store._id };
+        const filter: Record<string, any> = {
+          storeId: store._id,
+          ...VISIBLE_PRODUCT_FILTER,
+        };
         if (category) filter.category = category;
         const items = await this.productModel.find(filter).lean();
         return { items };
@@ -261,7 +268,7 @@ export class CatalogService implements OnModuleInit {
       CATALOG_TTL,
       async () => {
         const product = await this.productModel
-          .findOne({ storeSlug, slug: productSlug })
+          .findOne({ storeSlug, slug: productSlug, ...VISIBLE_PRODUCT_FILTER })
           .lean();
         if (!product) throw new NotFoundException('Product not found');
         return product;
@@ -276,7 +283,9 @@ export class CatalogService implements OnModuleInit {
       'featured',
       CATALOG_TTL,
       async () => {
-        const items = await this.productModel.find({ isPopular: true }).lean();
+        const items = await this.productModel
+          .find({ isPopular: true, ...VISIBLE_PRODUCT_FILTER })
+          .lean();
         return { items };
       },
     );
@@ -326,7 +335,7 @@ export class CatalogService implements OnModuleInit {
           .limit(size)
           .lean(),
         this.productModel
-          .find({ name: rx })
+          .find({ name: rx, ...VISIBLE_PRODUCT_FILTER })
           .select('name slug storeSlug image')
           .limit(size)
           .lean(),
@@ -357,6 +366,7 @@ export class CatalogService implements OnModuleInit {
           {
             $search: { index: PRODUCT_SEARCH_INDEX, autocomplete },
           },
+          { $match: VISIBLE_PRODUCT_FILTER },
           { $limit: size },
           { $project: { name: 1, slug: 1, storeSlug: 1, image: 1 } },
         ]),
@@ -425,6 +435,8 @@ export class CatalogService implements OnModuleInit {
               },
             },
           },
+          // Hidden items must never surface in customer search.
+          { $match: VISIBLE_PRODUCT_FILTER },
           { $skip: skip },
           { $limit: limit },
           { $set: { searchScore: { $meta: 'searchScore' } } },
@@ -434,7 +446,10 @@ export class CatalogService implements OnModuleInit {
       }
     }
     return this.productModel
-      .find({ $text: { $search: term } }, { score: { $meta: 'textScore' } })
+      .find(
+        { $text: { $search: term }, ...VISIBLE_PRODUCT_FILTER },
+        { score: { $meta: 'textScore' } },
+      )
       .sort({ score: { $meta: 'textScore' } })
       .skip(skip)
       .limit(limit)
@@ -578,6 +593,9 @@ export class CatalogService implements OnModuleInit {
     if (query.category && query.category !== ('all' as any)) {
       filter.category = query.category;
     }
+    if (query.hidden !== undefined) {
+      filter.isHidden = query.hidden ? true : { $ne: true };
+    }
     if (query.q) {
       const rx = new RegExp(
         query.q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
@@ -633,6 +651,9 @@ export class CatalogService implements OnModuleInit {
       oldPrice: src.oldPrice,
       image: src.image,
       category: src.category,
+      // A copy of a hidden item stays hidden — duplicating is how an admin
+      // drafts a variant, and it shouldn't go live the moment it's created.
+      isHidden: src.isHidden,
       isPopular: src.isPopular,
       isNew: src.isNew,
       badges: src.badges,
@@ -750,6 +771,64 @@ export class CatalogService implements OnModuleInit {
     return product.toObject();
   }
 
+  /**
+   * Take one item off the storefront (or put it back). Hiding is the reversible
+   * alternative to deleting: the document, its slug and its order history all
+   * survive, it just stops being readable by customers.
+   */
+  async setProductVisibility(id: string, hidden: boolean) {
+    const product = await this.getProductDocById(id);
+    if (product.isHidden !== hidden) {
+      product.isHidden = hidden;
+      await product.save();
+      await this.cache.bumpVersion(CATALOG_NS);
+      void this.activityService.log(
+        'stores',
+        `Item ${hidden ? 'hidden' : 'unhidden'} · ${product.name}`,
+      );
+    }
+    return product.toObject();
+  }
+
+  /**
+   * The same switch for many items at once — either an explicit list of ids or
+   * every item in one store. Returns how many documents actually changed, so
+   * the admin UI can report "12 items hidden" rather than echoing the request.
+   */
+  async bulkSetProductVisibility(
+    hidden: boolean,
+    ids?: string[],
+    storeId?: string,
+  ) {
+    const filter: Record<string, any> = {};
+
+    if (storeId) {
+      const store = await this.findStoreOrThrow(storeId);
+      filter.storeId = store._id;
+    }
+    if (ids?.length) {
+      const invalid = ids.filter((id) => !Types.ObjectId.isValid(id));
+      if (invalid.length) throw new BadRequestException('Invalid product id');
+      filter._id = { $in: ids.map((id) => new Types.ObjectId(id)) };
+    }
+    if (!filter.storeId && !filter._id) {
+      throw new BadRequestException('Provide ids or a storeId');
+    }
+
+    const { modifiedCount } = await this.productModel.updateMany(filter, {
+      $set: { isHidden: hidden },
+    });
+
+    if (modifiedCount > 0) {
+      await this.cache.bumpVersion(CATALOG_NS);
+      void this.activityService.log(
+        'stores',
+        `${modifiedCount} item${modifiedCount === 1 ? '' : 's'} ${hidden ? 'hidden' : 'unhidden'}`,
+      );
+    }
+    return { updated: modifiedCount, hidden };
+  }
+
   async deleteProduct(id: string) {
     if (!Types.ObjectId.isValid(id))
       throw new BadRequestException('Invalid product id');
@@ -758,8 +837,16 @@ export class CatalogService implements OnModuleInit {
     await this.cache.bumpVersion(CATALOG_NS);
   }
 
+  /**
+   * Customer-facing lookup by id (favourites, cart hydration, order pricing).
+   * Hidden items are simply absent, which is what makes an order containing one
+   * fail with "Product not found" instead of quietly pricing an item the store
+   * has taken down.
+   */
   async findProductsByIds(ids: string[]) {
-    return this.productModel.find({ _id: { $in: ids } }).lean();
+    return this.productModel
+      .find({ _id: { $in: ids }, ...VISIBLE_PRODUCT_FILTER })
+      .lean();
   }
 
   async getProductDocById(id: string) {

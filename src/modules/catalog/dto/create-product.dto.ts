@@ -46,6 +46,11 @@ export class CreateProductDto {
   @IsOptional()
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
+  isHidden?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
   isPopular?: boolean;
 
   @IsOptional()

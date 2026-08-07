@@ -19,6 +19,10 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryAdminProductsDto } from './dto/query-admin-products.dto';
 import { DuplicateProductDto } from './dto/duplicate-product.dto';
+import {
+  BulkSetProductVisibilityDto,
+  SetProductVisibilityDto,
+} from './dto/set-product-visibility.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -53,6 +57,25 @@ export class CatalogAdminController {
   @Get('menu-items')
   findAllProducts(@Query() query: QueryAdminProductsDto) {
     return this.catalogService.findAllProductsAdmin(query);
+  }
+
+  // Declared before 'menu-items/:id/...' routes so "visibility" can't be read
+  // as an item id.
+  @Patch('menu-items/visibility')
+  bulkSetProductVisibility(@Body() dto: BulkSetProductVisibilityDto) {
+    return this.catalogService.bulkSetProductVisibility(
+      dto.hidden,
+      dto.ids,
+      dto.storeId,
+    );
+  }
+
+  @Patch('menu-items/:id/visibility')
+  setProductVisibility(
+    @Param('id') id: string,
+    @Body() dto: SetProductVisibilityDto,
+  ) {
+    return this.catalogService.setProductVisibility(id, dto.hidden);
   }
 
   @Post('menu-items/:id/duplicate')
