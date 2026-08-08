@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(node -e ' *)",
-      "Bash(node scripts/seed-posipure-herbs.js)"
+      "Bash(node scripts/seed-posipure-herbs.js)",
+      "Bash(cd /Users/user/Desktop/space/ilueats-org && grep -rln \"isPopular\" ilueats/src ilueats-admin/src 2>/dev/null | head -30)",
+      "Read(//Users/user/Desktop/space/ilueats-org/**)"
     ]
   }
 }

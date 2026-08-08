@@ -29,6 +29,18 @@ const BADGES_TTL = 60; // seconds
 const GROUP_PRODUCT_FIELDS =
   'name slug storeSlug storeId image price oldPrice rating reviews category badges';
 
+/**
+ * The legacy boolean a badge shadows, if any ('popular' → `isPopular`).
+ *
+ * Those flags outlived the migration to badges: the admin item form still
+ * writes them, and the storefront falls back to them when a product carries no
+ * badges at all. So any membership write has to move the flag too — leaving a
+ * stale `isPopular: true` behind makes the item keep rendering its Popular chip
+ * after an admin removed it from the badge.
+ */
+const legacyFlagFor = (slug: string) =>
+  LEGACY_FLAG_BADGES.find((b) => b.slug === slug)?.flag;
+
 @Injectable()
 export class BadgesService implements OnModuleInit {
   private readonly logger = new Logger(BadgesService.name);
@@ -45,37 +57,53 @@ export class BadgesService implements OnModuleInit {
    * the home feed can read badges alone without losing the groups that were
    * already curated through those flags.
    *
-   * Gated on an empty collection rather than being blindly idempotent — this
-   * runs on every serverless cold start, and one countDocuments is cheaper
-   * than a pair of updateMany scans.
+   * The backfill MUST stay inside the empty-collection branch. It ran on every
+   * cold start once, which meant `$addToSet`-ing 'popular' back onto every
+   * product still flagged `isPopular` — so an item an admin removed from the
+   * Popular badge silently reappeared at the next cold start. Membership is
+   * the source of truth after first boot; the writes below keep the flags in
+   * step with it (see `syncLegacyFlag`).
    */
   async onModuleInit() {
     try {
       if ((await this.badgeModel.estimatedDocumentCount()) === 0) {
         await this.badgeModel.insertMany(DEFAULT_BADGES, { ordered: false });
-      } else {
-        // Backfill image paths on existing default badges if they don't have one set yet
-        for (const defaultBadge of DEFAULT_BADGES) {
-          if (defaultBadge.image) {
-            await this.badgeModel.updateOne(
-              { slug: defaultBadge.slug, $or: [{ image: '' }, { image: { $exists: false } }] },
-              { $set: { image: defaultBadge.image } },
-            );
-          }
+        await Promise.all(
+          LEGACY_FLAG_BADGES.map(({ flag, slug }) =>
+            this.productModel.updateMany(
+              { [flag]: true, badges: { $ne: slug } },
+              { $addToSet: { badges: slug } },
+            ),
+          ),
+        );
+        await this.cache.bumpVersion(CATALOG_NS);
+        this.logger.log(
+          `Seeded ${DEFAULT_BADGES.length} default badges and backfilled legacy membership`,
+        );
+        return;
+      }
+
+      // Backfill image paths on existing default badges if they don't have one set yet
+      let imagesSet = 0;
+      for (const defaultBadge of DEFAULT_BADGES) {
+        if (defaultBadge.image) {
+          const res = await this.badgeModel.updateOne(
+            {
+              slug: defaultBadge.slug,
+              $or: [{ image: '' }, { image: { $exists: false } }],
+            },
+            { $set: { image: defaultBadge.image } },
+          );
+          imagesSet += res.modifiedCount;
         }
       }
-      await Promise.all(
-        LEGACY_FLAG_BADGES.map(({ flag, slug }) =>
-          this.productModel.updateMany(
-            { [flag]: true, badges: { $ne: slug } },
-            { $addToSet: { badges: slug } },
-          ),
-        ),
-      );
-      await this.cache.bumpVersion(CATALOG_NS);
-      this.logger.log(
-        `Seeded/updated ${DEFAULT_BADGES.length} default badge illustrations and backfilled membership`,
-      );
+      // Only invalidate when something actually changed — this runs on every
+      // cold start, and an unconditional bump throws away the catalog cache
+      // each time a new lambda warms up.
+      if (imagesSet > 0) {
+        await this.cache.bumpVersion(CATALOG_NS);
+        this.logger.log(`Backfilled ${imagesSet} default badge illustration(s)`);
+      }
     } catch (err) {
       // Never block boot on this — the badges just stay empty and admin can
       // create them by hand.
@@ -225,9 +253,13 @@ export class BadgesService implements OnModuleInit {
   /** Deleting a badge also strips it from every product — no dangling slugs. */
   async remove(id: string) {
     const badge = await this.findOrThrow(id);
+    const flag = legacyFlagFor(badge.slug);
     await this.productModel.updateMany(
       { badges: badge.slug },
-      { $pull: { badges: badge.slug } },
+      {
+        $pull: { badges: badge.slug },
+        ...(flag ? { $set: { [flag]: false } } : {}),
+      },
     );
     await this.badgeModel.deleteOne({ _id: badge._id });
     await this.cache.bumpVersion(CATALOG_NS);
@@ -252,16 +284,24 @@ export class BadgesService implements OnModuleInit {
       throw new BadRequestException('Nothing to add or remove');
     }
 
+    const flag = legacyFlagFor(badge.slug);
+
     if (add.length > 0) {
       await this.productModel.updateMany(
         { _id: { $in: add.map((v) => new Types.ObjectId(v)) } },
-        { $addToSet: { badges: badge.slug } },
+        {
+          $addToSet: { badges: badge.slug },
+          ...(flag ? { $set: { [flag]: true } } : {}),
+        },
       );
     }
     if (remove.length > 0) {
       await this.productModel.updateMany(
         { _id: { $in: remove.map((v) => new Types.ObjectId(v)) } },
-        { $pull: { badges: badge.slug } },
+        {
+          $pull: { badges: badge.slug },
+          ...(flag ? { $set: { [flag]: false } } : {}),
+        },
       );
     }
 
