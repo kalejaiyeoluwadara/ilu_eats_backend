@@ -4,6 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import { ResilientThrottlerStorage } from './common/redis/resilient-throttler.storage';
 import { ThrottlerBehindProxyGuard } from './common/guards/throttler-behind-proxy.guard';
 import configuration from './config/configuration';
 import { RedisModule } from './common/redis/redis.module';
@@ -39,18 +40,43 @@ import { PromosModule } from './modules/promos/promos.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         uri: config.get<string>('mongodbUri'),
-        // Serverless connection budgeting. An instance is reused across
-        // CONCURRENT requests, so the pool must have room for more than one
-        // in-flight query — otherwise requests queue behind a single socket.
-        // minPoolSize 0 still lets idle/frozen instances release sockets back
-        // to Atlas rather than holding them open against the cluster cap.
-        maxPoolSize: 10,
+
+        // ---- Connection budgeting -------------------------------------
+        // Atlas M0 allows 500 connections CLUSTER-WIDE, and the cost is per
+        // serverless instance, not per request: every warm instance holds its
+        // own pool plus ~3-6 replica-set monitoring sockets. So the ceiling is
+        // roughly 500 / (monitors + maxPoolSize) instances — a pool of 10 put
+        // that at ~30 instances, which a modest traffic burst clears easily.
+        // That is what triggered Atlas' connection alert.
+        //
+        // 5 keeps real headroom for concurrent queries on one instance (Fluid
+        // Compute serves many requests per instance) while roughly halving each
+        // instance's contribution to the cap. Most reads are served from the
+        // Redis cache and never take a pool slot at all.
+        maxPoolSize: 5,
         minPoolSize: 0,
-        maxIdleTimeMS: 60000,
+        // Hand idle sockets back quickly. A frozen instance runs no timers, so
+        // this only reaps on warm-but-idle instances — which is exactly the
+        // population that would otherwise sit on connections between bursts.
+        maxIdleTimeMS: 15000,
+        // If the pool is saturated, fail this request rather than queueing on it
+        // forever. Without this the wait is unbounded and the browser just spins
+        // — an error the UI can show beats a screen that never resolves.
+        waitQueueTimeoutMS: 5000,
         // Fail fast (~5s) on an unreachable/misconfigured cluster instead of
         // hanging the request until the platform times out.
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 45000,
+
+        // ---- Cold-start cost ------------------------------------------
+        // Mongoose defaults autoIndex/autoCreate to true, which re-issues every
+        // schema's createIndexes on EVERY cold start — ~31 index declarations
+        // across 21 schemas here, all competing for pool slots before the first
+        // request is served. Indexes are a deploy-time concern, not a
+        // request-time one: run `npm run db:indexes` to apply schema changes.
+        // Left on outside production so local development stays zero-setup.
+        autoIndex: config.get<string>('nodeEnv') !== 'production',
+        autoCreate: config.get<string>('nodeEnv') !== 'production',
       }),
     }),
     RedisModule,
@@ -70,8 +96,12 @@ import { PromosModule } from './modules/promos/promos.module';
           // ceiling is a generous 100 req/min PER IP (now that the guard keys on
           // the real client IP); abusive callers hit it long before Redis/Mongo.
           throttlers: [{ name: 'default', ttl: 60000, limit: 100 }],
+          // Wrapped so a Redis blip can't 500 every route — this guard is
+          // global, so its storage failing takes the whole API down with it.
           storage: client
-            ? new ThrottlerStorageRedisService(client)
+            ? new ResilientThrottlerStorage(
+                new ThrottlerStorageRedisService(client),
+              )
             : undefined,
         };
       },

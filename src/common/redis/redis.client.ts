@@ -21,17 +21,31 @@ const globalRef = globalThis as GlobalWithRedis;
 const logger = new Logger('Redis');
 
 /**
- * Connection tuning geared for serverless request latency over durability:
- * a request must never hang waiting on Redis, so we cap retries and disable the
- * offline queue — when Redis is unreachable, commands reject quickly and the
- * CacheService falls through to the source of truth (Mongo) instead of stalling.
+ * Connection tuning geared for serverless request latency over durability: a
+ * request must never hang waiting on Redis.
+ *
+ * The bound is `commandTimeout` rather than a disabled offline queue. A frozen
+ * function instance runs no keepalives, so its socket is routinely dead by the
+ * next thaw and ioredis only finds out when it tries to write. With the offline
+ * queue OFF that first command rejected instantly ("Stream isn't writeable"),
+ * which meant the rate limiter was bypassed and the cache took a miss on the
+ * first request of every warm window — and, until the throttler storage was
+ * wrapped, returned a 500. With it ON the command waits for the reconnect that
+ * ioredis has already started, which normally lands in a few milliseconds.
+ *
+ * `commandTimeout` is what keeps that safe: if Redis is genuinely down, a
+ * command fails after 1s instead of queueing indefinitely, and every caller
+ * (CacheService, ResilientThrottlerStorage) treats the failure as a miss and
+ * carries on. So the worst case is bounded, and the common case is correct.
  */
 function buildOptions(): RedisOptions {
   return {
-    // Fail a command fast rather than buffering it forever when the socket is
-    // down; the cache layer treats a rejection as a miss.
     maxRetriesPerRequest: 1,
-    enableOfflineQueue: false,
+    // Let commands wait out a reconnect rather than rejecting the moment a
+    // thawed instance discovers its socket died while it was frozen.
+    enableOfflineQueue: true,
+    // The hard ceiling on how long any single request can wait on Redis.
+    commandTimeout: 1000,
     connectTimeout: 5000,
     // Reconnect with backoff, but give up escalating past 2s so a warm instance
     // recovers without hammering.

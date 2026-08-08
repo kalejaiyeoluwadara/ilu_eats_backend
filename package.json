@@ -18,7 +18,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed:landmarks": "ts-node -r tsconfig-paths/register src/seed/seed-landmarks.ts"
+    "seed:landmarks": "ts-node -r tsconfig-paths/register src/seed/seed-landmarks.ts",
+    "db:indexes": "ts-node -r tsconfig-paths/register src/scripts/sync-indexes.ts"
   },
   "dependencies": {
     "@nest-lab/throttler-storage-redis": "^1.2.0",

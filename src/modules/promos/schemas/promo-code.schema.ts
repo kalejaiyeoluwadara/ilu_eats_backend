@@ -81,5 +81,7 @@ export class PromoCode {
 export type PromoCodeDocument = PromoCode & Document;
 export const PromoCodeSchema = SchemaFactory.createForClass(PromoCode);
 
-PromoCodeSchema.index({ code: 1 }, { unique: true });
+// `code` already gets its unique index from @Prop({ unique: true }) above —
+// declaring it again here is what produced Mongoose's "Duplicate schema index
+// on {"code":1}" warning on every boot.
 PromoCodeSchema.index({ isActive: 1, expiresAt: 1 });
