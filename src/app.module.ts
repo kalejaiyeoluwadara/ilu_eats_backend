@@ -58,14 +58,22 @@ import { PromosModule } from './modules/promos/promos.module';
         // Hand idle sockets back quickly. A frozen instance runs no timers, so
         // this only reaps on warm-but-idle instances — which is exactly the
         // population that would otherwise sit on connections between bursts.
-        maxIdleTimeMS: 15000,
+        maxIdleTimeMS: 10000,
         // If the pool is saturated, fail this request rather than queueing on it
         // forever. Without this the wait is unbounded and the browser just spins
         // — an error the UI can show beats a screen that never resolves.
         waitQueueTimeoutMS: 5000,
-        // Fail fast (~5s) on an unreachable/misconfigured cluster instead of
-        // hanging the request until the platform times out.
-        serverSelectionTimeoutMS: 5000,
+        // Each instance holds one monitoring socket per replica-set node and
+        // polls them on this interval. The default 10s triples the background
+        // chatter against an M0 for no benefit at our scale.
+        heartbeatFrequencyMS: 30000,
+        // Patient enough to ride out a slow cluster during a traffic burst
+        // rather than turning it into a wave of 500s — the failure mode a
+        // 5s budget produces exactly when load is highest. The browser-side
+        // timeout in the web app is what guarantees the user still gets an
+        // answer, so being generous here costs nothing visible.
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 15000,
         socketTimeoutMS: 45000,
 
         // ---- Cold-start cost ------------------------------------------
