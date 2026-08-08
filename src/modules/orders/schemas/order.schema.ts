@@ -148,6 +148,14 @@ export class Order {
   @Prop({ required: true })
   serviceFee: number;
 
+  /**
+   * Rider tip, in full. Kept separate from the fees because it is not ours —
+   * it passes through to the rider, so payout needs to read it on its own
+   * rather than infer it from `total`.
+   */
+  @Prop({ default: 0 })
+  tip: number;
+
   @Prop({ required: true })
   total: number;
 

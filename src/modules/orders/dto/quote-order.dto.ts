@@ -14,6 +14,9 @@ import {
 import { DeliveryMode } from '../../../common/enums/order-status.enum';
 import { SelectedOptionInputDto } from '../../cart/dto/selected-option.dto';
 
+/** Upper bound on a rider tip, in naira. */
+export const MAX_TIP = 50_000;
+
 export class OrderItemDto {
   @IsString()
   productId: string;
@@ -76,4 +79,14 @@ export class QuoteOrderDto {
   @IsOptional()
   @IsString()
   promoCode?: string;
+
+  /**
+   * Optional rider tip in whole naira. Capped so a mistyped amount can't
+   * produce a charge the customer never meant to authorise.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(MAX_TIP)
+  tip?: number;
 }

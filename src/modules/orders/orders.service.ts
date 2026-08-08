@@ -162,6 +162,7 @@ export class OrdersService {
       discount: order.discount,
       deliveryFee: order.deliveryFee,
       serviceFee: order.serviceFee,
+      tip: order.tip,
       total: order.total,
       placedAt: order.placedAt,
       estimatedDeliveryWindow: order.estimatedDeliveryWindow,
@@ -188,6 +189,7 @@ export class OrdersService {
       discount: order.discount,
       deliveryFee: order.deliveryFee,
       serviceFee: order.serviceFee,
+      tip: order.tip,
       total: order.total,
       estimatedDeliveryWindow: order.estimatedDeliveryWindow,
     });
@@ -407,7 +409,11 @@ export class OrdersService {
     }
 
     const serviceFee = computeServiceFee(subtotal);
-    const total = Math.max(0, subtotal - discount) + deliveryFee + serviceFee;
+    // The tip rides on top of the discounted basket — a promo discounts the
+    // food, never the rider's tip.
+    const tip = dto.tip ?? 0;
+    const total =
+      Math.max(0, subtotal - discount) + deliveryFee + serviceFee + tip;
     const estimatedDeliveryWindow = estimateEtaWindow(
       store.deliveryTimeMins,
       deliveryDurationMin,
@@ -427,6 +433,7 @@ export class OrdersService {
       estimatedDeliveryWindow,
       landmarkName,
       serviceFee,
+      tip,
       total,
       promoCode,
       isFreeDelivery,
@@ -445,6 +452,7 @@ export class OrdersService {
       discount: priced.discount,
       deliveryFee: priced.deliveryFee,
       serviceFee: priced.serviceFee,
+      tip: priced.tip,
       total: priced.total,
       deliveryDistanceKm:
         priced.deliveryDistanceKm === null
@@ -476,6 +484,7 @@ export class OrdersService {
       estimatedDeliveryWindow,
       landmarkName,
       serviceFee,
+      tip,
       total,
       promoCode,
       isFreeDelivery,
@@ -542,6 +551,7 @@ export class OrdersService {
         isFreeDelivery,
         deliveryFee,
         serviceFee,
+        tip,
         total,
         status: OrderStatus.New,
         placedAt: new Date(),
@@ -580,6 +590,7 @@ export class OrdersService {
       discount: order.discount,
       deliveryFee: order.deliveryFee,
       serviceFee: order.serviceFee,
+      tip: order.tip,
       total: order.total,
       estimatedDeliveryWindow: order.estimatedDeliveryWindow,
     };
@@ -642,6 +653,7 @@ export class OrdersService {
         referralCode: order.referralCode,
         deliveryFee: order.deliveryFee,
         serviceFee: order.serviceFee,
+        tip: order.tip,
         status: order.status,
         placedAt: order.placedAt,
         lineItems: order.lineItems.map((item) => ({

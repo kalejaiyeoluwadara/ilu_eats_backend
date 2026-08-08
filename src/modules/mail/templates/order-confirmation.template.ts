@@ -10,6 +10,7 @@ export interface OrderConfirmationEmailInput {
   discount?: number;
   deliveryFee: number;
   serviceFee: number;
+  tip?: number;
   total: number;
   estimatedDeliveryWindow: number[];
   trackingUrl: string;
@@ -39,6 +40,16 @@ export function renderOrderConfirmationEmail(
       <tr>
         <td style="padding:2px 0;font-size:13px;color:#1f8a4c;">Discount</td>
         <td align="right" style="padding:2px 0;font-size:13px;color:#1f8a4c;">-${formatNaira(discount)}</td>
+      </tr>`
+      : '';
+
+  const tip = input.tip ?? 0;
+  const tipHtml =
+    tip > 0
+      ? `
+      <tr>
+        <td style="padding:2px 0;font-size:13px;color:#6f625c;">Rider tip</td>
+        <td align="right" style="padding:2px 0;font-size:13px;color:#6f625c;">${formatNaira(tip)}</td>
       </tr>`
       : '';
 
@@ -80,6 +91,7 @@ export function renderOrderConfirmationEmail(
         <td style="padding:2px 0;font-size:13px;color:#6f625c;">Service fee</td>
         <td align="right" style="padding:2px 0;font-size:13px;color:#6f625c;">${formatNaira(input.serviceFee)}</td>
       </tr>
+      ${tipHtml}
       <tr>
         <td style="padding:10px 0 0 0;font-size:15px;font-weight:700;color:#231512;">Total</td>
         <td align="right" style="padding:10px 0 0 0;font-size:15px;font-weight:700;color:#231512;">${formatNaira(input.total)}</td>
@@ -115,6 +127,7 @@ export function renderOrderConfirmationEmail(
     ...(discount > 0 ? [`Discount: -${formatNaira(discount)}`] : []),
     `Delivery fee: ${formatNaira(input.deliveryFee)}`,
     `Service fee: ${formatNaira(input.serviceFee)}`,
+    ...(tip > 0 ? [`Rider tip: ${formatNaira(tip)}`] : []),
     `Total: ${formatNaira(input.total)}`,
     '',
     `Track your order: ${input.trackingUrl}`,
